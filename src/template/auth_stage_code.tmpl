@@ -1,0 +1,20 @@
+{% extends "skeleton" %}
+
+{% block body_content %}
+<div>
+<h1>Key Card access system</h1>
+<form action="" method="post">
+<p>
+A one-time code was sent to your email.
+Please check your email (don't forget about SPAM or JUNK folders).
+Enter the code below.
+You have approximately 10min to do so,
+until a new code will have to be requested.
+</p>
+<p>
+<label for="code">code</label> <input type="text" id="code" name="code" />
+<input type="submit" value="validate code" />
+</p>
+</form>
+</div>
+{%- endblock %}

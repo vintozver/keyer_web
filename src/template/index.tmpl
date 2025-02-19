@@ -1,0 +1,73 @@
+{% extends "skeleton" %}
+
+{% block body_content %}
+<div>
+<h1>Key Card access system</h1>
+<p>Welcome, {{ user_name|e }}.</p>
+<h2>My issued cards</h2>
+{% if cards|length > 0 %}
+<table>
+<tr><th>UUID</th><th>date-time</th></tr>
+{% for card in cards -%}
+<tr><td>{{ card.id }}</td><td>{{ card.issued|datetime('%Y-%m-%d %H:%M %Z') }}</td></tr>
+{% endfor -%}
+</table>
+{% else %}
+<p>No cards yet.</p>
+{% endif %}
+<h2>New card</h2>
+<form action="/card_personalize" method="post" id="personalize">
+<p>Please have a blank card ready to tap. You will have 30 seconds to complete the operation after you hit the button.</p>
+<p><input type="submit" value="personalize new card" /></p>
+</form>
+<h2>Remote unlock</h2>
+<form action="/remote_unlock" method="post" id="remote_unlock">
+<p>This feature allows to access premises when you don't have your cards handy.</p>
+<p>We ask you to use this feature only when you are right at the door. Using improperly will allow unauthorized individuals access to the premises. Thank you for understanding.</p>
+<p><input type="submit" value="remote unlock now" /></p>
+</form>
+<script type="text/javascript">
+var form_personalize = $("form#personalize");
+form_personalize.submit(function (e) {
+    e.preventDefault();
+    form_personalize.find("input").prop("disabled", true);
+    var submit_enable = function () {
+        form_personalize.find("input").prop("disabled", false);
+    };
+    $.ajax("/card_personalize", {
+        method: "POST",
+        success: function (data, textStatus, jqXHR) {
+            submit_enable();
+
+            location.reload();
+        },
+        error: function (jqXHR, textStatus, errorThrown ) {
+            submit_enable();
+        }
+    });
+
+    e.preventDefault();
+
+    form_personalize.find("input").prop("disabled", true);
+});
+
+var form_remote_unlock = $("form#remote_unlock");
+form_remote_unlock.submit(function (e) {
+    e.preventDefault();
+    form_remote_unlock.find("input").prop("disabled", true);
+    var submit_enable = function () {
+        form_remote_unlock.find("input").prop("disabled", false);
+    };
+    $.ajax("/remote_unlock", {
+        method: "POST",
+        success: function (data, textStatus, jqXHR) {
+            submit_enable();
+        },
+        error: function (jqXHR, textStatus, errorThrown ) {
+            submit_enable();
+        }
+    });
+});
+</script>
+</div>
+{%- endblock %}

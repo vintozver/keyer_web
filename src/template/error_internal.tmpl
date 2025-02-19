@@ -1,0 +1,10 @@
+{% extends "skeleton" %}
+
+{% block body_content %}
+<h1>Поздравляем! Вы попали на секретный уровень сайта!</h1>
+<p><b>Type:</b> {% if err_type is defined %}<code>{{ err_type|e }}</code>{% else %}<i>undefined</i>{% endif %}</p>
+<p><b>Value:</b> {% if err_value is defined %}<code>{{ err_value|e }}</code>{% else %}<i>undefined</i>{% endif %}</p>
+<div><p><b>Traceback:</b></p>{% if err_tb is defined %}<pre>{{ err_tb|e }}<pre>{% else %}<i>undefined</i>{% endif %}</div>
+<p>Пожалуйста, отправьте нам это описание. Мы его получили в своих логах, но хотим еще раз убедиться, что Вам это удалось. Это поможет при создании новых уровней в будущем. Спасибо.</p>
+<p>Please, forward this page to product administrator or owner. We also logged this information. But we would like to make sure that you did this. Thank you.</p>
+{%- endblock %}

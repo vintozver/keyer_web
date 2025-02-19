@@ -1,0 +1,18 @@
+{% extends "skeleton" %}
+
+{% block body_content %}
+<div>
+<h1>Key Card access system</h1>
+<form action="" method="post">
+<p>
+Please enter your email in the field below and hit the button.
+A one-time verification code will be sent to you to confirm.
+Successful on-time confirmation will allow you to enter the system.
+</p>
+<p>
+<label for="email">email</label> <input type="text" id="email" name="email" />
+<input type="submit" value="request code" />
+</p>
+</form>
+</div>
+{%- endblock %}

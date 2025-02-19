@@ -1,0 +1,8 @@
+{% extends "skeleton" %}
+
+{% block body_content %}
+<h1>Поздравляем! Вы создали свой собственный сайт!</h1>
+<pre>{% if description is defined %}{{ description|e }}{% else%}Нет данных{% endif %}</pre>
+<p>Пожалуйста, отправьте нам ссылку на Ваш новый сайт. Мы его раскрутим!</p>
+{%- endblock %}
+

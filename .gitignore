@@ -1,0 +1,7 @@
+.idea/
+build/
+*.egg-info/
+config.txt
+log/
+src/static_ext/
+__pycache__

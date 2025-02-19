@@ -1,0 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+	<head>
+		{% block html_header_content -%}
+		<!-- base meta -->
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<!-- libs -->
+		<script type="text/javascript"{{ {'src': {'netloc': '', 'path': '/static/sprintf.js'}|url}|xmlattr }}></script>
+		<!-- jquery -->
+		<script type="text/javascript"{{ {'src': {'netloc': '', 'path': '/static/jquery.js'}|url}|xmlattr }}></script>
+		<!-- jquery notify -->
+		<link rel="stylesheet"{{ {'href': {'netloc': '', 'path': '/static/jquery-notify/main.css'}|url}|xmlattr }} />
+		<script type="text/javascript"{{ {'src': {'netloc': '', 'path': '/static/jquery-notify/main.js'}|url}|xmlattr }}></script>
+		{%- endblock %}
+		<title>{% block title %}Keyer UI - Aspen Grove OA{% endblock %}</title>
+	</head>
+	<body>
+		{% block whole_canvas -%}
+		{% block header_content -%}
+		<!-- base header -->
+		{%- endblock %}
+		{% block body_content -%}
+		<!-- base body -->
+		{%- endblock %}
+		{% block footer_content -%}
+		<!-- base footer  -->
+		{%- endblock %}
+		{%- endblock whole_canvas %}
+		<hr />
+		<div class="footer_links">Aspen Grove Owners Association, Kent, WA, USA. All rights reserved.</div>
+	 </body>
+</html>

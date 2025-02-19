@@ -1,0 +1,3 @@
+include src/template/*.tmpl
+include src/static/*
+include src/static_ext/*
