@@ -21,8 +21,8 @@ class Handler(_Handler):
         {'regex': re.compile(r'^/card_revoke/?$'), 'handler': 'handler.web.card_revoke'},
         {'regex': re.compile(r'^/remote_unlock/?$'), 'handler': 'handler.web.remote_unlock'},
         {'regex': re.compile(r'^/\bcallback\b'), 'map': [
-            {'regex': re.compile(r'^/config/?$'), 'handler': 'handlers.web.callback_config'},
-            {'regex': re.compile(r'^/log/?$'), 'handler': 'handlers.web.callback_log'},
+            {'regex': re.compile(r'^/config/?$'), 'handler': 'handler.web.callback_config'},
+            {'regex': re.compile(r'^/log/?$'), 'handler': 'handler.web.callback_log'},
         ]},
     ]
 
