@@ -21,7 +21,7 @@ class Handler(paramed_cgi_Handler):
             raise HandlerError('Method unsupported')
 
         user_id = self.req.context.session['user_id']
-        user = mod_mongo_user.UserDocument.objects(id=mod_mongo.bson.objectid.ObjectId(user_id)).get()
+        user = mod_mongo_user.UserDocument.objects(id=mod_mongo.bson.objectid.ObjectId(user_id), active=True).get()
 
         conn = http.client.HTTPConnection(config.remote_unit.host)
         try:

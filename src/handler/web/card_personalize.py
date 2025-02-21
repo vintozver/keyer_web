@@ -25,7 +25,7 @@ class Handler(paramed_cgi_Handler):
             raise HandlerError('Method unsupported')
 
         user_id = self.req.context.session['user_id']
-        user = mod_mongo_user.UserDocument.objects(id=mod_mongo.bson.objectid.ObjectId(user_id)).get()
+        user = mod_mongo_user.UserDocument.objects(id=mod_mongo.bson.objectid.ObjectId(user_id), active=True).get()
 
         conn = http.client.HTTPConnection(config.remote_unit.host)
         try:
@@ -35,6 +35,7 @@ class Handler(paramed_cgi_Handler):
                 json_new_card = json.loads(resp.read())
                 doc_new_card = mod_mongo_card.IssuedCard()
                 doc_new_card.id = uuid.UUID(json_new_card['identifier'])
+                doc_new_card.email = user.email
                 doc_new_card.user_id = user.id
                 doc_new_card.mifare_classic_access_key_B = binascii.unhexlify(json_new_card['mifare_classic_access_key_B'])
                 doc_new_card.save()

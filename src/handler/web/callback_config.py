@@ -20,20 +20,18 @@ class Handler(paramed_cgi_Handler):
         if self.req.method != 'GET':
             raise HandlerError('Method unsupported')
 
-        user_map = dict(map(lambda user: (user.id, user), mod_mongo_user.UserDocument.objects()))
-
         # see https://github.com/vintozver/keyer/blob/master/src/dispatcher.py
         # for the schema compatibility
         response = {
             'users': dict(map(lambda user: (
                 user.email,
                 [user.name, user.flags, user.id.generation_time.isoformat()]
-            ), user_map.values())),
+            ), mod_mongo_user.UserDocument.objects(active=True))),
             'issued_cards': dict(map(lambda issued_card: (
                 issued_card.id.hex,
                 [
                     issued_card.mifare_classic_access_key_B.hex(),
-                    user_map[issued_card.user_id].email,
+                    issued_card.email,
                     issued_card.issued.isoformat(),
                 ]
             ), mod_mongo_card.IssuedCard.objects())),
@@ -41,7 +39,7 @@ class Handler(paramed_cgi_Handler):
                 revoked_card.id.hex,
                 [
                     revoked_card.mifare_classic_access_key_B.hex(),
-                    user_map[revoked_card.user_id].email,
+                    revoked_card.email,
                     revoked_card.issued.isoformat(),
                     revoked_card.revoked.isoformat(),
                 ]
