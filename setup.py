@@ -3,19 +3,16 @@
 from setuptools import setup
 
 setup(
-    name='keyer_ui',
+    name='keyer_web',
     version='1.0',
-    description='Premises access solution using MIFARE Classic 1K EV1 - Web UI',
+    description='Premises access solution using MIFARE Classic 1K EV1 - frontend and backend',
     author='Vitaly Greck',
     author_email='vintozver@ya.ru',
-    url='https://github.com/vintozver/keyer_ui/',
-    package_dir={'keyer_ui': 'src'},
-    #data_files=(
-    #    ('static', ('build/static_jquery.js', )),
-    #),
+    url='https://github.com/vintozver/keyer_web/',
+    package_dir={'keyer_web': 'src'},
     include_package_data=True,
     install_requires=[
-        'jinja2', 'pymongo', 'mongoengine',
+        'jinja2', 'pymongo', 'mongoengine', 'aiodns', 'aiohttp',
     ],
     entry_points={
         'console_scripts': [
