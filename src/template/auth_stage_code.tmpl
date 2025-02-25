@@ -3,7 +3,10 @@
 {% block body_content %}
 <div>
 <h1>Key Card access system</h1>
-<form action="" method="post">
+<div id="dlg_auth_code" title="code authentication">
+  <p><span></span></p>
+</div>
+<form action="" method="post" id="auth_code">
 <p>
 A one-time code was sent to your email.
 Please check your email (don't forget about SPAM or JUNK folders).
@@ -17,4 +20,47 @@ until a new code will have to be requested.
 </p>
 </form>
 </div>
+<script type="text/javascript">
+
+var dialog_auth_code = $("div#dlg_auth_code");
+dialog_auth_code.dialog({
+    autoOpen: false,
+});
+
+var form_auth_code = $("form#auth_code");
+form_auth_code.submit(function (e) {
+    e.preventDefault();
+    form_auth_code.find("input[type=submit]").prop("disabled", true);
+    var submit_enable = function () {
+        form_auth_code.find("input[type=submit]").prop("disabled", false);
+    };
+    $.ajax("", {
+        method: "POST",
+        data: {
+            code: form_auth_code.find("input[name=code]").val()
+        },
+        success: function (data, textStatus, jqXHR) {
+            $("div#dlg_auth_code p span").text(jqXHR.responseText);
+            dialog_auth_code.dialog("open");
+
+            setTimeout(function () {
+                dialog_auth_code.dialog("close");
+
+                location.reload();
+            }, 3000);
+        },
+        error: function (jqXHR, textStatus, errorThrown ) {
+            $("div#dlg_auth_code p span").text(jqXHR.responseText);
+            dialog_auth_code.dialog("open");
+
+            setTimeout(function () {
+                dialog_auth_code.dialog("close");
+
+                submit_enable();
+            }, 3000);
+        }
+    });
+});
+
+</script>
 {%- endblock %}

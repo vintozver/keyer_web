@@ -3,7 +3,10 @@
 {% block body_content %}
 <div>
 <h1>Key Card access system</h1>
-<form action="" method="post">
+<div id="dlg_auth_email" title="email authentication">
+  <p><span></span></p>
+</div>
+<form action="" method="post" id="auth_email">
 <p>
 Please enter your email in the field below and hit the button.
 A one-time verification code will be sent to you to confirm.
@@ -15,4 +18,47 @@ Successful on-time confirmation will allow you to enter the system.
 </p>
 </form>
 </div>
+<script type="text/javascript">
+
+var dialog_auth_email = $("div#dlg_auth_email");
+dialog_auth_email.dialog({
+    autoOpen: false,
+});
+
+var form_auth_email = $("form#auth_email");
+form_auth_email.submit(function (e) {
+    e.preventDefault();
+    form_auth_email.find("input[type=submit]").prop("disabled", true);
+    var submit_enable = function () {
+        form_auth_email.find("input[type=submit]").prop("disabled", false);
+    };
+    $.ajax("", {
+        method: "POST",
+        data: {
+            email: form_auth_email.find("input[name=email]").val()
+        },
+        success: function (data, textStatus, jqXHR) {
+            $("div#dlg_auth_email p span").text(jqXHR.responseText);
+            dialog_auth_email.dialog("open");
+
+            setTimeout(function () {
+                dialog_auth_email.dialog("close");
+
+                location.reload();
+            }, 3000);
+        },
+        error: function (jqXHR, textStatus, errorThrown ) {
+            $("div#dlg_auth_email p span").text(jqXHR.responseText);
+            dialog_auth_email.dialog("open");
+
+            setTimeout(function () {
+                dialog_auth_email.dialog("close");
+
+                submit_enable();
+            }, 3000);
+        }
+    });
+});
+
+</script>
 {%- endblock %}
