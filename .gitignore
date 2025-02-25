@@ -2,6 +2,6 @@
 build/
 *.egg-info/
 config.txt
-log/
+traceback_web.txt
 src/static_ext/
 __pycache__
