@@ -28,7 +28,7 @@ logging.basicConfig(
 def logger_setup():
     import logging
     logger = logging.getLogger('traceback')
-    handler = logging.FileHandler(os.path.join('log', 'traceback_web.txt'))
+    handler = logging.FileHandler('traceback_web.txt')
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
     logger.addHandler(handler)
 logger_setup()
