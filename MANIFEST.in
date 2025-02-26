@@ -1,3 +1,2 @@
 include src/template/*.tmpl
-include src/static/*
-recursive-include src/static_ext/ *
+recursive-include src/static/ *

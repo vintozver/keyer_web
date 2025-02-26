@@ -13,7 +13,6 @@ class HandlerError(_HandlerError):
 
 class Handler(_Handler):
     STATIC_PATH = os.path.normpath(str(importlib.resources.files(__package__).joinpath('../../static')))
-    STATIC_EXT_PATH = os.path.normpath(str(importlib.resources.files(__package__).joinpath('../../static_ext')))
 
     def view_notfound(self, err):
         from . import skeleton as mod_tmpl
@@ -33,15 +32,6 @@ class Handler(_Handler):
 
         from ..ext import static as mod
         file_path = os.path.join(self.STATIC_PATH, rel_path)
-        if os.path.isfile(file_path):
-            try:
-                return mod.Handler(self.req)(path=file_path)
-            except mod.NotFoundError as err:
-                return self.view_notfound(err.args[0])
-            except mod.HandlerError as err:
-                raise HandlerError('Error in dependent handler', err)
-
-        file_path = os.path.join(self.STATIC_EXT_PATH, rel_path)
         if os.path.isfile(file_path):
             try:
                 return mod.Handler(self.req)(path=file_path)
