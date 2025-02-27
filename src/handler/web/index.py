@@ -103,7 +103,7 @@ class Handler(paramed_cgi_Handler):
                 return self.render_auth_stage_email()
 
     def process_set_email(self, email_address: str):
-        user = mod_mongo_user.UserDocument.objects(email=email_address).get()
+        user = mod_mongo_user.UserDocument.objects(email=email_address, active=True).get()
         if user is None:
             raise HandlerError('User not found')
 
@@ -162,7 +162,7 @@ class Handler(paramed_cgi_Handler):
             return
 
         if session_code_value == code:
-            user = mod_mongo_user.UserDocument.objects(email=session_email).get()
+            user = mod_mongo_user.UserDocument.objects(email=session_email, active=True).get()
             if user is None:
                 raise HandlerError('User not found')
             del req_session['email']
@@ -182,7 +182,7 @@ class Handler(paramed_cgi_Handler):
     def render_user_view(self, user: mod_mongo_user.UserDocument):
         cards = list(mod_mongo_card.IssuedCard.objects(user_id=user.id))
         content = _skeleton.TemplateFactory(self.req, 'index').render({
-            'user_name': user.name,
+            'user': user,
             'cards': cards,
         })
         self.req.setResponseCode(http.client.OK, http.client.responses[http.client.OK])

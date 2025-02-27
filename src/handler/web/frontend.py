@@ -18,6 +18,7 @@ class Handler(_Handler):
         {'regex': re.compile(r'^/$'), 'handler': 'handler.web.index'},
         {'regex': re.compile(r'^/static(/.*)$'), 'handler': 'handler.web.static', 'params': {'path': lambda rex: rex.group(1)}},
         {'regex': re.compile(r'^/card_personalize/?$'), 'handler': 'handler.web.card_personalize'},
+        {'regex': re.compile(r'^/card_depersonalize/?$'), 'handler': 'handler.web.card_depersonalize'},
         {'regex': re.compile(r'^/card_revoke/?$'), 'handler': 'handler.web.card_revoke'},
         {'regex': re.compile(r'^/remote_unlock/?$'), 'handler': 'handler.web.remote_unlock'},
     ]

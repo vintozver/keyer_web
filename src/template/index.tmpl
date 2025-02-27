@@ -3,15 +3,27 @@
 {% block body_content %}
 <div>
 <h1>Key Card access system</h1>
-<p>Welcome, {{ user_name|e }}.</p>
+<p>Welcome, {{ user.name|e }}.</p>
 <h2>My issued cards</h2>
 {% if cards|length > 0 %}
 <table>
-<tr><th>UUID</th><th>date-time</th></tr>
+<tr><th>UUID</th><th>date-time</th><th></th></tr>
 {% for card in cards -%}
-<tr><td>{{ card.id }}</td><td>{{ card.issued|datetime('%Y-%m-%d %H:%M %Z') }}</td></tr>
+<tr>
+<td>...{{ card.id.hex[-12:] }}</td>
+<td>{{ card.issued|datetime('%Y-%m-%d %H:%M %Z') }}</td>
+<td><span title="revoke"><a href="#"  {{ {'onclick': 'javascript:card_revoke(%s)'|format(card.id.hex|json)}|xmlattr }}>x</a></span></td>
+</tr>
 {% endfor -%}
 </table>
+<p>
+Click <span>x</span> if you want to report the card lost/stolen.
+This will invalidate the card record. If you find it later -
+please return to the administrator for depersonalization.
+</p>
+<p><strong>tip:</strong> write down the last digits of the card number - on it.
+It will help identify the card later.
+</p>
 {% else %}
 <p>No cards yet.</p>
 {% endif %}
@@ -26,6 +38,15 @@
 <p>We ask you to use this feature only when you are right at the door. Using improperly will allow unauthorized individuals access to the premises. Thank you for understanding.</p>
 <p><input type="submit" value="remote unlock now" /></p>
 </form>
+{% if user.admin %}
+<h2>Depersonalize card</h2>
+<form action="/card_depersonalize" method="post" id="depersonalize">
+<p>Format the issued/revoked card, so it becomes blank.</p>
+<p>The card will be automatically removed from the user who personalized it.</p>
+<p>Have the card ready to tap.</p>
+<p><input type="submit" value="format card" /></p>
+</form>
+{% endif %}
 <script type="text/javascript">
 var form_personalize = $("form#personalize");
 form_personalize.submit(function (e) {
@@ -68,6 +89,22 @@ form_remote_unlock.submit(function (e) {
         }
     });
 });
+
+var card_revoke = function (card_identifier) {
+    if (window.confirm(sprintf("Are you sure you want to revoke the card %s", card_identifier))) {
+        $.ajax("/card_revoke", {
+            method: "POST",
+            data: {"identifier": card_identifier},
+            success: function (data, textStatus, jqXHR) {
+                location.reload();
+            },
+            error: function (jqXHR, textStatus, errorThrown ) {
+            }
+        });
+
+    }
+};
+
 </script>
 </div>
 {%- endblock %}
