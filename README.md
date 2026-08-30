@@ -38,3 +38,17 @@ remote_unit:
 The MongoDB database is selected from the database path in `mongodb_uri`, so
 the URI must include a database name. When omitted, settings use the values
 shown above.
+
+## Syncing the users
+
+The `keyer-sync-users` console script synchronizes the users with a list read
+from the standard input. The input is tab separated with 3 fields: unit number,
+name, email. The unit number is disregarded.
+
+```sh
+keyer-sync-users < users.tsv
+```
+
+Users present in the input are created (with `active=True`) when their email is
+not known yet, otherwise their name is updated. Active, non-admin users which
+are missing from the input are marked as inactive.
