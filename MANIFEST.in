@@ -1,2 +1,0 @@
-include src/template/*.tmpl
-recursive-include src/static/ *

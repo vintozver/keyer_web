@@ -267,7 +267,6 @@ class GenericSQLSession(Session):
         Session.__init__(self, **kwargs)
 
 
-from ... import config
 from ...module import mongo as mod_mongo
 
 
@@ -277,7 +276,7 @@ class MongoDbSession(Session):
         self.hash = '%x' % random.SystemRandom().getrandbits(128)
 
         with mod_mongo.DbSessionController() as db_session:
-            db_collection = db_session[config.db_mongo.name]['sessions']
+            db_collection = db_session.get_default_database()['sessions']
             db_collection.insert_one(mod_mongo.bson.son.SON({'_id': self.id, 'hash': self.hash, 'created': self.created, 'data': self.data}))
 
     def load(self, session_id, session_hash):
@@ -286,7 +285,7 @@ class MongoDbSession(Session):
             session_id = mod_mongo.bson.objectid.ObjectId(session_id)
 
         with mod_mongo.DbSessionController() as db_session:
-            db_collection = db_session[config.db_mongo.name]['sessions']
+            db_collection = db_session.get_default_database()['sessions']
             session = db_collection.find_one(mod_mongo.bson.son.SON({'_id': session_id}))
 
         if session is None:
@@ -306,7 +305,7 @@ class MongoDbSession(Session):
     def save(self):
         self.updated = datetime.datetime.now(datetime.UTC)
         with mod_mongo.DbSessionController() as db_session:
-            db_collection = db_session[config.db_mongo.name]['sessions']
+            db_collection = db_session.get_default_database()['sessions']
             db_collection.update_one(
                 mod_mongo.bson.son.SON({'_id': self.id}),
                 mod_mongo.bson.son.SON({'$set': {'updated': self.updated, 'data': self.data}}),
@@ -316,7 +315,8 @@ class MongoDbSession(Session):
     def tidy(cls, max_idle=0, max_age=0):
         dt = datetime.datetime.now(datetime.UTC)
         with mod_mongo.DbSessionController() as db_session:
+            db_collection = db_session.get_default_database()['sessions']
             if max_idle:
-                db_session[config.db_mongo.name]['sessions'].delete_many(mod_mongo.bson.son.SON({'updated': {'$lt': dt - max_idle}}))
+                db_collection.delete_many(mod_mongo.bson.son.SON({'updated': {'$lt': dt - max_idle}}))
             if max_age:
-                db_session[config.db_mongo.name]['sessions'].delete_many(mod_mongo.bson.son.SON({'created': {'$lt': dt - max_age}}))
+                db_collection.delete_many(mod_mongo.bson.son.SON({'created': {'$lt': dt - max_age}}))

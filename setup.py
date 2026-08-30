@@ -1,100 +1,79 @@
-#!/usr/bin/env python3
+from io import BytesIO
+from pathlib import Path
+from shutil import copytree
+from urllib.request import urlopen
+from zipfile import ZipFile
 
-import io
-import os
-import os.path
-import setuptools
-import setuptools.command.build
-import urllib.request
-import zipfile
-
-
-class ExtraStaticFiles(setuptools.Command):
-    _loc_sprintf_js = "https://raw.githubusercontent.com/alexei/sprintf.js/refs/heads/master/src/sprintf.js"
-    _f_sprintf_js = "sprintf.js"
-    _loc_jquery_js = "https://code.jquery.com/jquery-3.6.0.js"
-    _f_jquery_js = "jquery.js"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.build_lib = None
-        self.editable_mode = False
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        self.set_undefined_options("build_py", ("build_lib", "build_lib"))
-
-    def run(self):
-        pkgs = list(self.distribution.package_dir.keys())
-        assert len(pkgs) == 1, "Only one package shall be defined"
-        pkg = pkgs[0]
-
-        try:
-            os.makedirs(os.path.join(self.build_lib, pkg, "static"))
-        except OSError:
-            pass
-
-        _content_sprintf_js = urllib.request.urlopen(self._loc_sprintf_js).read()
-        with open(os.path.join(self.build_lib, pkg, "static", self._f_sprintf_js), "wb") as _file_sprintf_js:
-            _file_sprintf_js.write(_content_sprintf_js)
-
-        _content_jquery_js = urllib.request.urlopen(self._loc_jquery_js).read()
-        with open(os.path.join(self.build_lib, pkg, "static", self._f_jquery_js), "wb") as _file_jquery_js:
-            _file_jquery_js.write(_content_jquery_js)
-
-        try:
-            os.makedirs(os.path.join(self.build_lib, pkg, "static", "jquery-ui"))
-        except OSError:
-            pass
-
-        _zf_buffer = io.BytesIO(urllib.request.urlopen("https://jqueryui.com/resources/download/jquery-ui-1.14.1.zip").read())
-        with zipfile.ZipFile(_zf_buffer, 'r') as _zf_jquery_ui:
-            _b = _zf_jquery_ui.read("jquery-ui-1.14.1/jquery-ui.min.css")
-            with open(os.path.join(self.build_lib, pkg, "static", "jquery-ui", "main.css"), "wb") as _f:
-                _f.write(_b)
-            _b = _zf_jquery_ui.read("jquery-ui-1.14.1/jquery-ui.structure.min.css")
-            with open(os.path.join(self.build_lib, pkg, "static", "jquery-ui", "structure.css"), "wb") as _f:
-                _f.write(_b)
-            _b = _zf_jquery_ui.read("jquery-ui-1.14.1/jquery-ui.theme.min.css")
-            with open(os.path.join(self.build_lib, pkg, "static", "jquery-ui", "theme.css"), "wb") as _f:
-                _f.write(_b)
-            _b = _zf_jquery_ui.read("jquery-ui-1.14.1/jquery-ui.min.js")
-            with open(os.path.join(self.build_lib, pkg, "static", "jquery-ui", "main.js"), "wb") as _f:
-                _f.write(_b)
-            _images_dir = os.path.join(self.build_lib, pkg, "static", "jquery-ui", "images")
-            try:
-                os.makedirs(_images_dir)
-            except OSError:
-                pass
-            for _zf_name in _zf_jquery_ui.namelist():
-                _prefix = "jquery-ui-1.14.1/images/"
-                if _zf_name.startswith(_prefix):
-                    _b = _zf_jquery_ui.read(_zf_name)
-                    _zf_name = _zf_name.removeprefix(_prefix)
-                    with open(os.path.join(_images_dir, _zf_name), "wb") as _f:
-                        _f.write(_b)
+from setuptools import setup
+from setuptools.command.build_py import build_py as _build_py
 
 
-setuptools.command.build.build.sub_commands.append(("build_static_extra", None))
+STATIC_URLS = {
+    "sprintf.js": "https://raw.githubusercontent.com/alexei/sprintf.js/1.1.2/dist/sprintf.min.js",
+    "jquery.js": "https://code.jquery.com/jquery-3.6.0.min.js",
+}
 
-
-setuptools.setup(
-    name='keyer_web',
-    version='1.0',
-    description='Premises access solution using MIFARE Classic 1K EV1 - frontend and backend',
-    author='Vitaly Greck',
-    author_email='vintozver@ya.ru',
-    url='https://github.com/vintozver/keyer_web/',
-    cmdclass={'build_static_extra': ExtraStaticFiles},
-    package_dir={'keyer_web': 'src'},
-    include_package_data=True,
-    install_requires=[
-        'jinja2', 'pymongo', 'mongoengine', 'aiodns', 'aiohttp',
+ARCHIVE_URLS = {
+    "https://jqueryui.com/resources/download/jquery-ui-1.14.1.zip": [
+        ("jquery-ui.min.css", "jquery-ui/main.css"),
+        ("jquery-ui.structure.min.css", "jquery-ui/structure.css"),
+        ("jquery-ui.theme.min.css", "jquery-ui/theme.css"),
+        ("jquery-ui.min.js", "jquery-ui/main.js"),
+        ("images/", "jquery-ui/images/"),
     ],
-    entry_points={
-        'console_scripts': [
-        ],
-    },
+}
+
+
+class build_py(_build_py):
+    def run(self):
+        super().run()
+        package_dir = Path(self.build_lib) / "keyer_web"
+        for directory in ("handler", "module", "util", "template"):
+            copytree(Path("src") / directory, package_dir / directory, dirs_exist_ok=True)
+        static_dir = package_dir / "static"
+
+        for relative_path, url in STATIC_URLS.items():
+            destination = static_dir / relative_path
+            if not destination.exists():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes(urlopen(url).read())
+
+        for url, actions in ARCHIVE_URLS.items():
+            missing = [
+                target for source, target in actions
+                if (source.endswith("/") and not (static_dir / target).is_dir())
+                or (not source.endswith("/") and not (static_dir / target).exists())
+            ]
+            if missing:
+                with ZipFile(BytesIO(urlopen(url).read())) as archive:
+                    members = archive.namelist()
+                    anchor_source = next(
+                        (source for source, _ in actions if not source.endswith("/")),
+                        actions[0][0].rstrip("/"),
+                    )
+                    marker = "/%s" % anchor_source
+                    member = next(
+                        member for member in members
+                        if member.endswith(marker) or marker + "/" in member
+                    )
+                    prefix = member.split(marker, 1)[0]
+                    for source, target in actions:
+                        archive_path = "%s/%s" % (prefix, source.rstrip("/"))
+                        if source.endswith("/"):
+                            source_prefix = "%s/" % archive_path
+                            for member in members:
+                                if member.startswith(source_prefix) and not member.endswith("/"):
+                                    destination = static_dir / target / member[len(source_prefix):]
+                                    if not destination.exists():
+                                        destination.parent.mkdir(parents=True, exist_ok=True)
+                                        destination.write_bytes(archive.read(member))
+                        else:
+                            destination = static_dir / target
+                            if not destination.exists():
+                                destination.parent.mkdir(parents=True, exist_ok=True)
+                                destination.write_bytes(archive.read(archive_path))
+
+
+setup(
+    cmdclass={"build_py": build_py},
 )
