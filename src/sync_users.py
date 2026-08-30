@@ -31,26 +31,34 @@ def read_input(stream) -> dict[str, str]:
 
 
 def sync_users(users: dict[str, str]) -> None:
-    """Create/update the users from the input, deactivate the remaining ones."""
+    """Create/update the users from the input, unset the active flag of the remaining ones."""
 
     for email, name in users.items():
         user = mod_mongo_user.UserDocument.objects(email=email).first()
         if user is None:
             mod_mongo_user.UserDocument(name=name, email=email, active=True).save()
             sys.stderr.write('created: %s\n' % email)
-        elif user.name != name:
+            continue
+        changes = []
+        if user.name != name:
             user.name = name
+            changes.append('name')
+        if user.active is False:
+            user.active = True
+            changes.append('active')
+        if changes:
             user.save()
-            sys.stderr.write('updated: %s\n' % email)
+            sys.stderr.write('updated (%s): %s\n' % (', '.join(changes), email))
 
-    for user in mod_mongo_user.UserDocument.objects(active=True):
+    for user in mod_mongo_user.UserDocument.objects():
         if user.admin:
             continue
         if (user.email or '').lower() in users:
             continue
-        user.active = False
-        user.save()
-        sys.stderr.write('deactivated: %s\n' % user.email)
+        if user.active is False:
+            continue
+        mod_mongo_user.UserDocument.objects(id=user.id).update_one(unset__active=True)
+        sys.stderr.write('active unset: %s\n' % user.email)
 
 
 def main() -> int:

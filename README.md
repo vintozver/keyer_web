@@ -50,5 +50,6 @@ keyer-sync-users < users.tsv
 ```
 
 Users present in the input are created (with `active=True`) when their email is
-not known yet, otherwise their name is updated. Active, non-admin users which
-are missing from the input are marked as inactive.
+not known yet, otherwise their name is updated and `active` is set to `True`
+when it was explicitly `False`. Non-admin users which are missing from the input
+keep an explicit `active=False`, otherwise their `active` attribute is unset.
