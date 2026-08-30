@@ -39,7 +39,11 @@ class UserDocumentManager:
 
     def __call__(self, **kwargs):
         if 'email' in kwargs:
-            return Query(self.user if kwargs['email'] == self.user.email else None)
+            return Query(
+                self.user
+                if self.user is not None and kwargs['email'] == self.user.email
+                else None
+            )
         if kwargs == {'active__ne': False}:
             return []
         raise AssertionError('unexpected query')
@@ -93,6 +97,22 @@ class SyncUsersTests(unittest.TestCase):
         self.assertEqual(created[0].flags, 'new')
         self.assertEqual(existing.flags, 'existing')
         self.assertEqual(existing.name, 'Updated Name')
+
+    def test_unset_default_flags_are_omitted_for_created_users(self):
+        manager = UserDocumentManager()
+        created = []
+
+        class SyncedUserDocument(UserDocument):
+            objects = manager
+
+            def __init__(self, **kwargs):
+                super().__init__(**kwargs)
+                created.append(self)
+
+        with patch.object(sync_users.mod_mongo_user, 'UserDocument', SyncedUserDocument):
+            sync_users.sync_users({'new@example.com': 'New User'})
+
+        self.assertNotIn('flags', created[0].__dict__)
 
 
 if __name__ == '__main__':

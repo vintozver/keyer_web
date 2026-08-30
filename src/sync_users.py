@@ -37,9 +37,10 @@ def sync_users(users: dict[str, str], default_flags: str | None = None) -> None:
     for email, name in users.items():
         user = mod_mongo_user.UserDocument.objects(email=email).first()
         if user is None:
-            mod_mongo_user.UserDocument(
-                name=name, email=email, active=True, flags=default_flags
-            ).save()
+            fields = {'name': name, 'email': email, 'active': True}
+            if default_flags is not None:
+                fields['flags'] = default_flags
+            mod_mongo_user.UserDocument(**fields).save()
             sys.stderr.write('created: %s\n' % email)
             continue
         changes = []
