@@ -47,11 +47,11 @@ class build_py(_build_py):
             if missing:
                 with ZipFile(BytesIO(urlopen(url).read())) as archive:
                     members = archive.namelist()
-                    source = next(
+                    anchor_source = next(
                         (source for source, _ in actions if not source.endswith("/")),
                         actions[0][0].rstrip("/"),
                     )
-                    marker = "/%s" % source
+                    marker = "/%s" % anchor_source
                     member = next(
                         member for member in members
                         if member.endswith(marker) or marker + "/" in member

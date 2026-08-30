@@ -31,5 +31,6 @@ remote_unit:
   port: 80
 ```
 
-The MongoDB database is selected from the database path in `mongodb_uri`.
-When omitted, settings use the values shown above.
+The MongoDB database is selected from the database path in `mongodb_uri`, so
+the URI must include a database name. When omitted, settings use the values
+shown above.
