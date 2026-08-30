@@ -39,7 +39,7 @@ class Handler(paramed_cgi_Handler):
             self.req.setHeader('Content-Type', 'text/plain; charset=utf-8')
             self.req.write('Not your card')
 
-        conn = http.client.HTTPConnection(config.remote_unit.host)
+        conn = http.client.HTTPConnection(config.remote_unit_host)
         try:
             conn.request('PATCH', '/', headers={'X-Card-Identifier': card.id.hex})
             resp = conn.getresponse()

@@ -21,8 +21,6 @@ mongodb_uri: mongodb://localhost/keyer
 mail:
   smtp_host: localhost
   smtp_port: 25
-  smtp_user:
-  smtp_password:
   from_name: Key Card Access System
   from_email: noreply@localhost
 

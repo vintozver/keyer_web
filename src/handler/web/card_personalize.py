@@ -27,7 +27,7 @@ class Handler(paramed_cgi_Handler):
         user_id = self.req.context.session['user_id']
         user = mod_mongo_user.UserDocument.objects(id=mod_mongo.bson.objectid.ObjectId(user_id), active=True).get()
 
-        conn = http.client.HTTPConnection(config.remote_unit.host)
+        conn = http.client.HTTPConnection(config.remote_unit_host)
         try:
             conn.request('PUT', '/', headers={'X-Email': user.email})
             resp = conn.getresponse()

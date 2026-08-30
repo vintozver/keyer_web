@@ -118,8 +118,8 @@ class Handler(paramed_cgi_Handler):
 
         content = mod_tmpl_fs.TemplateFactory('email_code').render({'code': code['value'], 'exp': code['exp']})
 
-        sender_name = str(email.header.Header(config.mail.from_name, 'utf-8'))
-        sender_address = config.mail.from_email
+        sender_name = str(email.header.Header(config.from_name, 'utf-8'))
+        sender_address = config.from_email
         recipient_name = str(email.header.Header(user.name, 'utf-8'))
         recipient_address = user.email
 
@@ -129,7 +129,7 @@ class Handler(paramed_cgi_Handler):
         msg['Subject'] = str(email.header.Header('One-time access code', 'utf-8'))
         msg['X-Mailer'] = 'Python/Key Card Access System'
 
-        mailer = smtplib.SMTP(config.mail.smtp_host, config.mail.smtp_port)
+        mailer = smtplib.SMTP(config.smtp_host, config.smtp_port)
         mailer.sendmail(sender_address, recipient_address, msg.as_string())
 
         self.req.setResponseCode(http.client.OK, http.client.responses[http.client.OK])

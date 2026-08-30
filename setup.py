@@ -28,7 +28,7 @@ class build_py(_build_py):
     def run(self):
         super().run()
         package_dir = Path(self.build_lib) / "keyer_web"
-        for directory in ("config", "handler", "module", "util", "template"):
+        for directory in ("handler", "module", "util", "template"):
             copytree(Path("src") / directory, package_dir / directory, dirs_exist_ok=True)
         static_dir = package_dir / "static"
 
