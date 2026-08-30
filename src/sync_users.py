@@ -50,7 +50,7 @@ def sync_users(users: dict[str, str]) -> None:
             user.save()
             sys.stderr.write('updated (%s): %s\n' % (', '.join(changes), email))
 
-    for user in mod_mongo_user.UserDocument.objects():
+    for user in mod_mongo_user.UserDocument.objects(active__ne=False):
         if user.admin:
             continue
         if (user.email or '').lower() in users:
