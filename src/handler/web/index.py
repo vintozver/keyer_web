@@ -118,8 +118,8 @@ class Handler(paramed_cgi_Handler):
 
         content = mod_tmpl_fs.TemplateFactory('email_code').render({'code': code['value'], 'exp': code['exp']})
 
-        sender_name = str(email.header.Header(config.from_name, 'utf-8'))
-        sender_address = config.from_email
+        sender_name = str(email.header.Header(config.smtp_from_name, 'utf-8'))
+        sender_address = config.smtp_from_email
         recipient_name = str(email.header.Header(user.name, 'utf-8'))
         recipient_address = user.email
 
