@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path
+from shutil import copytree
 from urllib.request import urlopen
 from zipfile import ZipFile
 
@@ -26,7 +27,10 @@ ARCHIVE_URLS = {
 class build_py(_build_py):
     def run(self):
         super().run()
-        static_dir = Path(self.build_lib) / "keyer_web" / "static"
+        package_dir = Path(self.build_lib) / "keyer_web"
+        for directory in ("config", "handler", "module", "util", "template"):
+            copytree(Path("src") / directory, package_dir / directory, dirs_exist_ok=True)
+        static_dir = package_dir / "static"
 
         for relative_path, url in STATIC_URLS.items():
             destination = static_dir / relative_path
