@@ -6,6 +6,7 @@ The input is tab separated with 3 fields: unit number, name, email.
 The unit number is disregarded.
 """
 
+import argparse
 import sys
 
 from .module.mongo import user as mod_mongo_user
@@ -30,13 +31,15 @@ def read_input(stream) -> dict[str, str]:
     return users
 
 
-def sync_users(users: dict[str, str]) -> None:
+def sync_users(users: dict[str, str], default_flags: str | None = None) -> None:
     """Create/update the users from the input, unset the active flag of the remaining ones."""
 
     for email, name in users.items():
         user = mod_mongo_user.UserDocument.objects(email=email).first()
         if user is None:
-            mod_mongo_user.UserDocument(name=name, email=email, active=True).save()
+            mod_mongo_user.UserDocument(
+                name=name, email=email, active=True, flags=default_flags
+            ).save()
             sys.stderr.write('created: %s\n' % email)
             continue
         changes = []
@@ -61,13 +64,20 @@ def sync_users(users: dict[str, str]) -> None:
         sys.stderr.write('active unset: %s\n' % user.email)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--default-flags',
+        default=None,
+        help='flags assigned to newly created users',
+    )
+    args = parser.parse_args(argv)
     try:
         users = read_input(sys.stdin)
     except ValueError as err:
         sys.stderr.write('%s\n' % err)
         return 1
-    sync_users(users)
+    sync_users(users, args.default_flags)
     return 0
 
 

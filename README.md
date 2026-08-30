@@ -46,10 +46,12 @@ from the standard input. The input is tab separated with 3 fields: unit number,
 name, email. The unit number is disregarded.
 
 ```sh
-keyer-sync-users < users.tsv
+keyer-sync-users [--default-flags FLAGS] < users.tsv
 ```
 
 Users present in the input are created (with `active=True`) when their email is
 not known yet, otherwise their name is updated and `active` is set to `True`
 when it was explicitly `False`. Non-admin users which are missing from the input
 keep an explicit `active=False`, otherwise their `active` attribute is unset.
+`--default-flags` sets `flags` only for newly created users; when omitted, flags
+are left unset as before.
