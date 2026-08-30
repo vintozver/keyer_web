@@ -22,7 +22,7 @@ class DbSessionController(_AutoRefContextItem):
 
 mongoengine_alias = object()
 mongoengine.register_connection(
-    mongoengine_alias, name=config.name, host=config.mongodb_uri,
+    mongoengine_alias, host=config.mongodb_uri,
     document_class=OrderedDict, tz_aware=True)
 
 
