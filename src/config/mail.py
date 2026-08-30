@@ -1,35 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import configparser
-
-from . import _parser
+from . import settings as _settings
 
 
-try:
-    try:
-        smtp_host = _parser.get('mail', 'smtp_host')
-    except configparser.NoOptionError:
-        smtp_host = 'localhost'
-    try:
-        smtp_port = _parser.getint('mail', 'smtp_port')
-    except configparser.NoOptionError:
-        smtp_port = 25
-    try:
-        smtp_user = _parser.get('mail', 'smtp_user')
-    except configparser.NoOptionError:
-        smtp_user = None
-    try:
-        from_name = _parser.get('mail', 'from_name')
-    except configparser.NoOptionError:
-        from_name = 'Key Card Access System'
-    try:
-        from_email = _parser.get('mail', 'from_email')
-    except configparser.NoOptionError:
-        from_email = 'noreply@localhost'
-except configparser.NoSectionError:
-    smtp_host = 'localhost'
-    smtp_port = 25
-    smtp_user = None
-    smtp_password = None
-    from_name = 'Key Card Access System'
-    from_email = 'noreply@localhost'
+_mail = _settings.get('mail', {})
+smtp_host = _mail.get('smtp_host', 'localhost')
+smtp_port = _mail.get('smtp_port', 25)
+smtp_user = _mail.get('smtp_user')
+from_name = _mail.get('from_name', 'Key Card Access System')
+from_email = _mail.get('from_email', 'noreply@localhost')

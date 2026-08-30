@@ -1,7 +1,7 @@
 .idea/
 build/
 *.egg-info/
-config.txt
+config.yaml
 traceback_web.txt
 src/static_ext/
 __pycache__

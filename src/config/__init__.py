@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
 
-import configparser as _configparser
 import importlib as _importlib
-import sys as _sys
+import urllib.parse as _urllib_parse
+
+import yaml as _yaml
 
 
-_parser = _configparser.RawConfigParser()
-_parser.read('config.txt')
+try:
+    with open('config.yaml', encoding='utf-8') as _config_file:
+        settings = _yaml.safe_load(_config_file) or {}
+except FileNotFoundError:
+    settings = {}
+
+mongodb_uri = settings.get('mongodb_uri', 'mongodb://localhost/keyer')
+name = _urllib_parse.urlparse(mongodb_uri).path.lstrip('/') or 'keyer'
 
 
 def _import_sub():
@@ -20,11 +27,11 @@ def _import_sub():
         else:
             globals()[_partition] = module
 
-    partitions = ['main', 'db_mongo', 'mail', 'remote_unit']
+    partitions = ['main', 'mail', 'remote_unit']
     for partition in partitions:
         inject(partition)
 
 _import_sub()
 
 
-__all__ = ['_parser']
+__all__ = ['settings', 'mongodb_uri', 'name']

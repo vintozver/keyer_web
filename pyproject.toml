@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keyer_web"
+version = "1.0"
+description = "Premises access solution using MIFARE Classic 1K EV1 - frontend and backend"
+requires-python = ">=3.11"
+authors = [
+    {name = "Vitaly Greck", email = "vintozver@ya.ru"},
+]
+dependencies = [
+    "Jinja2",
+    "pymongo",
+    "mongoengine",
+    "aiodns",
+    "aiohttp",
+    "PyYAML",
+]
+
+[project.urls]
+Homepage = "https://github.com/vintozver/keyer_web/"
+
+[tool.setuptools]
+packages = ["keyer_web"]
+package-dir = {"keyer_web" = "src"}
+include-package-data = true
+
+[tool.setuptools.package-data]
+keyer_web = ["template/**/*.tmpl", "static/**/*"]
