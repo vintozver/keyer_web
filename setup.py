@@ -47,9 +47,16 @@ class build_py(_build_py):
             if missing:
                 with ZipFile(BytesIO(urlopen(url).read())) as archive:
                     members = archive.namelist()
-                    source_file = next(source for source, _ in actions if not source.endswith("/"))
-                    suffix = "/%s" % source_file
-                    prefix = next(member[:-len(suffix)] for member in members if member.endswith(suffix))
+                    source = next(
+                        (source for source, _ in actions if not source.endswith("/")),
+                        actions[0][0].rstrip("/"),
+                    )
+                    marker = "/%s" % source
+                    member = next(
+                        member for member in members
+                        if member.endswith(marker) or marker + "/" in member
+                    )
+                    prefix = member.split(marker, 1)[0]
                     for source, target in actions:
                         archive_path = "%s/%s" % (prefix, source.rstrip("/"))
                         if source.endswith("/"):
