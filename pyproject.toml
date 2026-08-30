@@ -19,6 +19,9 @@ dependencies = [
     "PyYAML",
 ]
 
+[project.scripts]
+keyer-sync-users = "keyer_web.sync_users:main"
+
 [project.urls]
 Homepage = "https://github.com/vintozver/keyer_web/"
 
