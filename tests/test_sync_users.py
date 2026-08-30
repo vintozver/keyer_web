@@ -56,8 +56,7 @@ class SyncUsersTests(unittest.TestCase):
             patch.object(sync_users, 'sync_users') as sync,
         ):
             self.assertEqual(sync_users.main(['--default-flags', 'staff']), 0)
-
-        sync.assert_called_once_with({}, 'staff')
+            sync.assert_called_once_with({}, 'staff')
 
     def test_main_defaults_flags_to_unset(self):
         with (
@@ -65,8 +64,7 @@ class SyncUsersTests(unittest.TestCase):
             patch.object(sync_users, 'sync_users') as sync,
         ):
             self.assertEqual(sync_users.main([]), 0)
-
-        sync.assert_called_once_with({}, None)
+            sync.assert_called_once_with({}, None)
 
     def test_default_flags_are_assigned_only_to_created_users(self):
         existing = UserDocument(
