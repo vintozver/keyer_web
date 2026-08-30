@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import importlib as _importlib
-import urllib.parse as _urllib_parse
 
 import yaml as _yaml
 
@@ -13,7 +12,6 @@ except FileNotFoundError:
     settings = {}
 
 mongodb_uri = settings.get('mongodb_uri', 'mongodb://localhost/keyer')
-name = _urllib_parse.urlparse(mongodb_uri).path.lstrip('/') or 'keyer'
 
 
 def _import_sub():
@@ -34,4 +32,4 @@ def _import_sub():
 _import_sub()
 
 
-__all__ = ['settings', 'mongodb_uri', 'name']
+__all__ = ['settings', 'mongodb_uri']
