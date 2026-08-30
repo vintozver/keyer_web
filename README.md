@@ -18,11 +18,12 @@ Create `config.yaml` in the application's working directory:
 ```yaml
 mongodb_uri: mongodb://localhost/keyer
 
-mail:
-  smtp_host: localhost
-  smtp_port: 25
-  from_name: Key Card Access System
-  from_email: noreply@localhost
+smtp:
+  host: localhost
+  port: 25
+  from:
+    name: Key Card Access System
+    email: noreply@localhost
 
 remote_unit:
   host: "::1"

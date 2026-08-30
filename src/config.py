@@ -12,11 +12,12 @@ except FileNotFoundError:
 
 mongodb_uri = settings.get('mongodb_uri', 'mongodb://localhost/keyer')
 
-_mail = settings.get('mail', {})
-smtp_host = _mail.get('smtp_host', 'localhost')
-smtp_port = _mail.get('smtp_port', 25)
-from_name = _mail.get('from_name', 'Key Card Access System')
-from_email = _mail.get('from_email', 'noreply@localhost')
+_smtp = settings.get('smtp', {})
+smtp_host = _smtp.get('host', 'localhost')
+smtp_port = _smtp.get('port', 25)
+_smtp_from = _smtp.get('from', {})
+from_name = _smtp_from.get('name', 'Key Card Access System')
+from_email = _smtp_from.get('email', 'noreply@localhost')
 
 _remote_unit = settings.get('remote_unit', {})
 remote_unit_host = _remote_unit.get('host', '::1')
