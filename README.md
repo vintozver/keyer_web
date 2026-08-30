@@ -17,6 +17,11 @@ Create `config.yaml` in the application's working directory:
 
 ```yaml
 mongodb_uri: mongodb://localhost/keyer
+timezone: America/Los_Angeles
+
+product:
+  name: Keyer UI
+  description: Aspen Grove OA, Keyer. Kent, WA, USA. All rights reserved.
 
 smtp:
   host: localhost

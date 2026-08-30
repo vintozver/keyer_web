@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import pytz
 import yaml
+from zoneinfo import ZoneInfo
 
 
 try:
@@ -23,6 +23,10 @@ _remote_unit = settings.get('remote_unit', {})
 remote_unit_host = _remote_unit.get('host', '::1')
 remote_unit_port = _remote_unit.get('port', 80)
 
-product_name = "Keyer UI"
-product_description = "Aspen Grove OA, Keyer. Kent, WA, USA. All rights reserved."
-timezone = pytz.timezone("America/Los_Angeles")
+_product = settings.get('product', {})
+product_name = _product.get('name', 'Keyer UI')
+product_description = _product.get(
+    'description',
+    'Aspen Grove OA, Keyer. Kent, WA, USA. All rights reserved.',
+)
+timezone = ZoneInfo(settings.get('timezone', 'America/Los_Angeles'))
