@@ -47,7 +47,9 @@ class build_py(_build_py):
             if missing:
                 with ZipFile(BytesIO(urlopen(url).read())) as archive:
                     members = archive.namelist()
-                    prefix = members[0].split("/", 1)[0]
+                    source_file = next(source for source, _ in actions if not source.endswith("/"))
+                    suffix = "/%s" % source_file
+                    prefix = next(member[:-len(suffix)] for member in members if member.endswith(suffix))
                     for source, target in actions:
                         archive_path = "%s/%s" % (prefix, source.rstrip("/"))
                         if source.endswith("/"):
@@ -66,7 +68,5 @@ class build_py(_build_py):
 
 
 setup(
-    packages=["keyer_web"],
-    package_dir={"keyer_web": "src"},
     cmdclass={"build_py": build_py},
 )
