@@ -3,6 +3,7 @@
 from ..ext.decorator.session import Session as _deco_Session
 from ...module.template.filesystem import TemplateFactory as _TemplateFactory, TemplateError as _TemplateError
 from ...util.handler import Handler as _Handler, HandlerError as _HandlerError
+from ... import config as _config
 
 
 class HandlerError(_HandlerError):
@@ -12,7 +13,10 @@ class HandlerError(_HandlerError):
 class Handler(_Handler):
     @_deco_Session()
     def tmpl_params(self):
-        tmpl_params = dict()
+        tmpl_params = {
+            'product_name': _config.product_name,
+            'product_description': _config.product_description,
+        }
         return tmpl_params
 
 
