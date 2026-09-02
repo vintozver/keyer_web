@@ -14,7 +14,7 @@
 		<link rel="stylesheet"{{ {'href': {'netloc': '', 'path': '/static/jquery-ui/theme.css'}|url}|xmlattr }} />
 		<script type="text/javascript"{{ {'src': {'netloc': '', 'path': '/static/jquery-ui/main.js'}|url}|xmlattr }}></script>
 		{%- endblock %}
-		<title>{% block title %}Keyer UI - Aspen Grove OA{% endblock %}</title>
+		<title>{% block title %}{{ product_name|e }}{% endblock %}</title>
 	</head>
 	<body>
 		{% block whole_canvas -%}
@@ -29,6 +29,6 @@
 		{%- endblock %}
 		{%- endblock whole_canvas %}
 		<hr />
-		<div class="footer_links">Aspen Grove Owners Association, Kent, WA, USA. All rights reserved.</div>
+		<div class="footer_links">{{ product_description|e }}</div>
 	 </body>
 </html>
