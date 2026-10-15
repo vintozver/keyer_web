@@ -39,7 +39,7 @@ shown above.
 ## Units and endpoints
 
 Active admin users can open **Manage keyer units** from the home page, or visit
-`/admin/units`, to create, edit, or delete units and add or remove signing keys.
+`/admin/unit`, to create, edit, or delete units and add or remove signing keys.
 All management requests require an active administrator session; changes are
 POST-only and protected by a session-bound CSRF token. Paste a PEM public key
 or X.509 certificate when adding a key; it is validated and converted to DER

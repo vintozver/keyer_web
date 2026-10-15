@@ -11,11 +11,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from mongoengine import ValidationError
 
-from . import skeleton
-from ..ext.decorator.session import Session
-from ..ext.paramed_cgi import Handler as BaseHandler
-from ...module.mongo.unit import UnitDocument, KeyItem
-from ...module.mongo.user import UserDocument
+from .. import skeleton
+from ...ext.decorator.session import Session
+from ...ext.paramed_cgi import Handler as BaseHandler
+from ....module.mongo.unit import UnitDocument, KeyItem
+from ....module.mongo.user import UserDocument
 
 
 class Handler(BaseHandler):
@@ -83,7 +83,7 @@ class Handler(BaseHandler):
             unit.keyset = [key for key in unit.keyset if key.id != key_id]
             unit.save()
         self.req.setResponseCode(http.client.SEE_OTHER, http.client.responses[http.client.SEE_OTHER])
-        self.req.setHeader('Location', '/admin/units')
+        self.req.setHeader('Location', '/admin/unit')
 
     @Session()
     def __call__(self):
@@ -119,7 +119,7 @@ class Handler(BaseHandler):
         if not session.get('admin_csrf'):
             session['admin_csrf'] = secrets.token_urlsafe(32)
             session.save()
-        content = skeleton.TemplateFactory(self.req, 'admin_units').render({
+        content = skeleton.TemplateFactory(self.req, 'admin.unit').render({
             'units': list(UnitDocument.objects.order_by('name', 'id')),
             'csrf_token': session['admin_csrf'],
         })

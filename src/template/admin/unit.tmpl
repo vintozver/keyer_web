@@ -23,14 +23,14 @@ also removes all its signing keys.</p>
 <section>
 <h2>{{ unit.name|e }}</h2>
 <p>Unit id: <code>{{ unit.id|string|e }}</code></p>
-<form action="/admin/units" method="post">
+<form action="/admin/unit" method="post">
 {{ hidden('save', unit.id) }}
 {{ unit_fields(unit) }}
 </form>
 <h3>Signing keys</h3>
 <ul>
 {% for key in unit.keyset %}
-<li><form action="/admin/units" method="post">
+<li><form action="/admin/unit" method="post">
 {{ hidden('delete_key', unit.id) }}
 <input type="hidden" name="key_id" value="{{ key.id|e }}" />
 <code>{{ key.id|e }}</code> ({{ 'certificate' if key.crt else 'public key' }})
@@ -40,14 +40,14 @@ also removes all its signing keys.</p>
 <li>No signing keys. This unit cannot authenticate callbacks yet.</li>
 {% endfor %}
 </ul>
-<form action="/admin/units" method="post">
+<form action="/admin/unit" method="post">
 {{ hidden('add_key', unit.id) }}
 <p><label>New key id <input name="key_id" required="required" /></label></p>
 <p><label>PEM public key or certificate<br />
 <textarea name="material" rows="8" cols="72" required="required"></textarea></label></p>
 <p><button type="submit">Add signing key</button></p>
 </form>
-<form action="/admin/units" method="post">
+<form action="/admin/unit" method="post">
 {{ hidden('delete', unit.id) }}
 <p><button type="submit" onclick="return window.confirm('Delete this unit and all its signing keys?');">Delete unit</button></p>
 </form>
@@ -56,7 +56,7 @@ also removes all its signing keys.</p>
 <p>No units configured.</p>
 {% endfor %}
 <h2>Add unit</h2>
-<form action="/admin/units" method="post">
+<form action="/admin/unit" method="post">
 {{ hidden('save', '') }}
 {{ unit_fields(none) }}
 </form>

@@ -15,7 +15,8 @@ from jinja2 import DictLoader
 import keyer_web
 
 from keyer_web.handler.ext.decorator import session as session_decorator
-from keyer_web.handler.web import admin_units, frontend
+from keyer_web.handler.web import frontend
+from keyer_web.handler.web.admin import unit as admin_unit
 from keyer_web.module.mongo.unit import KeyItem, UnitDocument
 from keyer_web.module.template import Environment
 from keyer_web.util.web.request import Request
@@ -43,8 +44,8 @@ class AdminUnitsTests(unittest.TestCase):
         self.units.objects.return_value.first.return_value = self.unit
         self.units.objects.order_by.return_value = [self.unit]
         for target, name, value in (
-            (admin_units, 'UserDocument', self.users),
-            (admin_units, 'UnitDocument', self.units),
+            (admin_unit, 'UserDocument', self.users),
+            (admin_unit, 'UnitDocument', self.units),
             (session_decorator.mod_session, 'MongoDbSession', Mock(return_value=self.session)),
         ):
             patcher = patch.object(target, name, value)
@@ -54,7 +55,7 @@ class AdminUnitsTests(unittest.TestCase):
     def call(self, method='GET', **params):
         body = urlencode(params).encode()
         req = Request({
-            'PATH_INFO': '/admin/units', 'REQUEST_METHOD': method,
+            'PATH_INFO': '/admin/unit', 'REQUEST_METHOD': method,
             'CONTENT_TYPE': 'application/x-www-form-urlencoded',
             'CONTENT_LENGTH': str(len(body)), 'wsgi.input': io.BytesIO(body),
         })
@@ -72,6 +73,16 @@ class AdminUnitsTests(unittest.TestCase):
         self.assertIn(str(self.unit.id).encode(), b''.join(req.response_body))
         self.assertIn(b'test-csrf', b''.join(req.response_body))
         self.users.objects.assert_called_once_with(id=self.user_id, active=True, admin=True)
+
+    def test_singular_admin_route_and_form_actions(self):
+        for path in ('/admin/unit', '/admin/unit/'):
+            self.assertEqual(
+                frontend.Handler.handle_map(frontend.Handler.ROUTE_MAP, path),
+                ('handler.web.admin.unit', {}))
+        self.assertIsNone(frontend.Handler.handle_map(frontend.Handler.ROUTE_MAP, '/admin/units'))
+        content = b''.join(self.call().response_body).decode()
+        self.assertIn('action="/admin/unit"', content)
+        self.assertNotIn('/admin/units', content)
 
     def test_first_get_creates_and_saves_csrf_token(self):
         del self.session['admin_csrf']
@@ -111,7 +122,7 @@ class AdminUnitsTests(unittest.TestCase):
             req = self.call('POST', csrf_token='test-csrf', action='save', unit_id='',
                             name='New door', host='::1', port='80')
             self.assertEqual(req.status_code, 303)
-            self.assertEqual(req.responseHeaders['Location'], '/admin/units')
+            self.assertEqual(req.responseHeaders['Location'], '/admin/unit')
             unit = save.call_args.args[0]
             unit.validate()
             self.assertEqual((unit.name, unit.host, unit.port), ('New door', '::1', 80))
@@ -212,7 +223,7 @@ class AdminUnitsTests(unittest.TestCase):
         for admin in (False, True):
             content = environment.get_template('index').render(
                 user=SimpleNamespace(name='User', admin=admin), cards=[], units=[])
-            self.assertEqual('href="/admin/units"' in content, admin)
+            self.assertEqual('href="/admin/unit"' in content, admin)
 
 
 if __name__ == '__main__':
