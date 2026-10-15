@@ -17,6 +17,7 @@ from ..ext.paramed_cgi import HandlerError as paramed_cgi_HandlerError
 from ...module import mongo as mod_mongo
 from ...module.mongo import user as mod_mongo_user
 from ...module.mongo import card as mod_mongo_card
+from ...module.mongo import unit as mod_mongo_unit
 from ...module.template import filesystem as mod_tmpl_fs
 from ... import config
 
@@ -184,6 +185,7 @@ class Handler(paramed_cgi_Handler):
         content = _skeleton.TemplateFactory(self.req, 'index').render({
             'user': user,
             'cards': cards,
+            'units': list(mod_mongo_unit.UnitDocument.objects.order_by('name', 'id')),
         })
         self.req.setResponseCode(http.client.OK, http.client.responses[http.client.OK])
         self.req.setHeader('Cache-Control', 'public, no-cache')

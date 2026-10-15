@@ -3,6 +3,7 @@
 import collections.abc
 import http.client
 import importlib
+import json
 import re
 import sys
 import traceback
@@ -11,6 +12,7 @@ from functools import reduce
 
 from ...util.handler import Handler as _Handler, HandlerError as _HandlerError
 from ...util.logger import Logger
+from ...util.web.unit_auth import authenticate, AuthenticationError
 
 
 class Handler(_Handler):
@@ -64,10 +66,16 @@ class Handler(_Handler):
             if module is None:
                 return self.view_notfound('No handler found')
             module_name, module_params = module
-
+            self.req.unit, self.req.jwt_payload = authenticate(self.req)
             module = importlib.import_module("..." + module_name, __package__)
             module_handler = module.Handler(self.req)
             return module_handler(**module_params)
+        except AuthenticationError:
+            self.req.setResponseCode(http.client.UNAUTHORIZED, http.client.responses[http.client.UNAUTHORIZED])
+            self.req.setHeader('WWW-Authenticate', 'Bearer')
+            self.req.setHeader('Cache-Control', 'no-store')
+            self.req.setHeader('Content-Type', 'application/json')
+            self.req.write(json.dumps({'error': 'Invalid or missing unit JWT'}))
         except:
             err_type, err_value, err_tb = sys.exc_info()
             Logger(self.req).traceback(err_type, err_value, err_tb)

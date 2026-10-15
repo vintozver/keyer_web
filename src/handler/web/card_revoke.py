@@ -4,19 +4,18 @@ import http.client
 import uuid
 
 from ..ext.decorator.session import Session as _deco_Session
-from ..ext.paramed_cgi import Handler as paramed_cgi_Handler
+from .remote_unit import Handler as remote_unit_Handler
 from ..ext.paramed_cgi import HandlerError as paramed_cgi_HandlerError
 from ...module import mongo as mod_mongo
 from ...module.mongo import user as mod_mongo_user
 from ...module.mongo import card as mod_mongo_card
-from ... import config
 
 
 class HandlerError(paramed_cgi_HandlerError):
     pass
 
 
-class Handler(paramed_cgi_Handler):
+class Handler(remote_unit_Handler):
     @_deco_Session()
     def __call__(self):
         if self.req.method != 'POST':
@@ -38,8 +37,11 @@ class Handler(paramed_cgi_Handler):
             self.req.setHeader('Cache-Control', 'public, no-cache')
             self.req.setHeader('Content-Type', 'text/plain; charset=utf-8')
             self.req.write('Not your card')
+            return
 
-        conn = http.client.HTTPConnection(config.remote_unit_host)
+        conn = self.connect_unit()
+        if conn is None:
+            return
         try:
             conn.request('PATCH', '/', headers={'X-Card-Identifier': card.id.hex})
             resp = conn.getresponse()

@@ -5,6 +5,13 @@
 
 <h1>Key Card access system</h1>
 <p>Welcome, {{ user.name|e }}.</p>
+<p><label for="unit_id">Keyer unit:</label>
+<select id="unit_id" name="unit_id">
+{% for unit in units -%}
+<option value="{{ unit.id|string|e }}">{{ unit.name|e }}</option>
+{% endfor -%}
+</select></p>
+{% if not units %}<p>No keyer units configured.</p>{% endif %}
 <h2>My issued cards</h2>
 {% if cards|length > 0 %}
 <table>
@@ -61,6 +68,7 @@ form_personalize.submit(function (e) {
     };
     $.ajax("/card_personalize", {
         method: "POST",
+        data: {"unit_id": $("#unit_id").val() || ""},
         success: function (data, textStatus, jqXHR) {
             dialog_personalize.dialog("close");
             submit_enable();
@@ -105,6 +113,7 @@ form_remote_unlock.submit(function (e) {
     dialog_remote_unlock.dialog("open");
     $.ajax("/remote_unlock", {
         method: "POST",
+        data: {"unit_id": $("#unit_id").val() || ""},
         success: function (data, textStatus, jqXHR) {
             dialog_remote_unlock.dialog("close");
             submit_enable();
@@ -120,7 +129,7 @@ var card_revoke = function (card_identifier) {
     if (window.confirm(sprintf("Are you sure you want to revoke the card %s", card_identifier))) {
         $.ajax("/card_revoke", {
             method: "POST",
-            data: {"identifier": card_identifier},
+            data: {"identifier": card_identifier, "unit_id": $("#unit_id").val() || ""},
             success: function (data, textStatus, jqXHR) {
                 location.reload();
             },
@@ -168,6 +177,7 @@ form_depersonalize.submit(function (e) {
     };
     $.ajax("/card_depersonalize", {
         method: "POST",
+        data: {"unit_id": $("#unit_id").val() || ""},
         success: function (data, textStatus, jqXHR) {
             dialog_depersonalize.dialog("close");
             submit_enable();
