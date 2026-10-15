@@ -11,7 +11,7 @@ class Params(object):
     def __init__(self, req):
         self.query_string = _req_parser.QueryString(req)
         if req.method == 'POST':
-            content_type = req.requestHeaders.get('Content-Type')
+            content_type = (req.requestHeaders.get('Content-Type') or '').split(';', 1)[0].strip().lower()
             if content_type == 'application/json' or content_type == 'text/json':
                 self.form = _req_parser.RequestBodyParserImpl(req).as_json()
             else:
@@ -32,6 +32,11 @@ class Params(object):
             raise self.NotFoundError
 
     def param_post(self, name):
+        if isinstance(self.form, dict):
+            try:
+                return self.form[name]
+            except KeyError:
+                raise self.NotFoundError
         if self.form is not None:
             try:
                 return self.form.param(name)
@@ -41,6 +46,9 @@ class Params(object):
             raise self.NotFoundError
 
     def paramlist_post(self, name):
+        if isinstance(self.form, dict):
+            value = self.param_post(name)
+            return value if isinstance(value, list) else [value]
         if self.form is not None:
             try:
                 return self.form.paramlist(name)

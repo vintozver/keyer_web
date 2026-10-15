@@ -19,10 +19,6 @@ _smtp_from = _smtp.get('from', {})
 smtp_from_name = _smtp_from.get('name', 'Key Card Access System')
 smtp_from_email = _smtp_from.get('email', 'noreply@localhost')
 
-_remote_unit = settings.get('remote_unit', {})
-remote_unit_host = _remote_unit.get('host', '::1')
-remote_unit_port = _remote_unit.get('port', 80)
-
 _product = settings.get('product', {})
 product_name = _product.get('name', 'Keyer UI')
 product_description = _product.get(

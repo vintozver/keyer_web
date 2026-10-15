@@ -17,6 +17,8 @@ dependencies = [
     "aiodns",
     "aiohttp",
     "PyYAML",
+    "PyJWT[crypto]",
+    "cryptography",
 ]
 
 [project.scripts]
