@@ -5,6 +5,7 @@
 
 <h1>Key Card access system</h1>
 <p>Welcome, {{ user.name|e }}.</p>
+{% if user.admin %}<p><a href="/admin/units">Manage keyer units</a></p>{% endif %}
 <p><label for="unit_id">Keyer unit:</label>
 <select id="unit_id" name="unit_id">
 {% for unit in units -%}

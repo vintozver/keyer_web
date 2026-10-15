@@ -38,6 +38,17 @@ shown above.
 
 ## Units and endpoints
 
+Active admin users can open **Manage keyer units** from the home page, or visit
+`/admin/units`, to create, edit, or delete units and add or remove signing keys.
+All management requests require an active administrator session; changes are
+POST-only and protected by a session-bound CSRF token. Paste a PEM public key
+or X.509 certificate when adding a key; it is validated and converted to DER
+for storage. Private keys are never accepted. Key ids must be unique within
+the unit. To rotate a key, add the new key before removing the old one.
+Deleting a unit removes its keyset and prevents further callback authentication.
+The first administrator must already be provisioned in the `user` collection
+with `active: true` and `admin: true`.
+
 Serve `keyer_web.util.web.Application` as the WSGI application. The existing
 `keyer_web.util.web.frontend.Application` and
 `keyer_web.util.web.backend.Application` entry points remain compatible aliases
