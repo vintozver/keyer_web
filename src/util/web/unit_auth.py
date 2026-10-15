@@ -49,7 +49,7 @@ def authenticate(req):
             else x509.load_der_x509_certificate(bytes(key.crt)).public_key()
         )
         payload = jwt.decode(token, public_key, algorithms=JWT_ALGORITHMS)
-    except (jwt.InvalidTokenError, InvalidId, ValueError, TypeError, OverflowError,
+    except (jwt.InvalidTokenError, jwt.InvalidKeyError, InvalidId, ValueError, TypeError, OverflowError,
             UnsupportedAlgorithm) as err:
         raise AuthenticationError('Invalid JWT') from err
     return unit, payload

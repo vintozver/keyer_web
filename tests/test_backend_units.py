@@ -18,6 +18,7 @@ import keyer_web
 
 from keyer_web.handler.web import backend, callback_config, frontend, remote_unit
 from keyer_web.handler.web import card_depersonalize, card_personalize, card_revoke, remote_unlock
+from keyer_web.handler.ext.paramed_cgi import Params
 from keyer_web.module.mongo import user
 from keyer_web.module.mongo.unit import KeyItem, UnitDocument
 from keyer_web.module.template import Environment
@@ -127,6 +128,12 @@ class UnitAuthenticationTests(unittest.TestCase):
         other = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         with self.assertRaises(unit_auth.AuthenticationError):
             unit_auth.authenticate(request(token=self.token(key=other)))
+
+    def test_algorithm_incompatible_with_registered_key_returns_401(self):
+        token = self.token(key=ed25519.Ed25519PrivateKey.generate(), algorithm='EdDSA')
+        req = request(token=token)
+        frontend.Handler(req)()
+        self.assertEqual(req.status_code, 401)
 
     def test_unknown_unit(self):
         self.objects.return_value.first.return_value = None
@@ -238,6 +245,25 @@ class UnitModelAndSelectionTests(unittest.TestCase):
             self.assertIs(handler.connect_unit(), connection.return_value)
             connection.assert_called_once_with('::1', 8080)
             objects.assert_called_once_with(id=self.unit.id)
+
+    def test_json_unit_selection_and_card_identifier(self):
+        req = request('/card_revoke', method='POST', body=json.dumps({
+            'unit_id': str(self.unit.id), 'identifier': 'card-id',
+        }).encode())
+        req.requestHeaders['Content-Type'] = 'application/json; charset=utf-8'
+        handler = remote_unit.Handler(req)
+        objects = Mock()
+        objects.return_value.first.return_value = self.unit
+        with (
+            patch.object(remote_unit, 'UnitDocument', SimpleNamespace(objects=objects)),
+            patch.object(remote_unit.http.client, 'HTTPConnection') as connection,
+        ):
+            self.assertIs(handler.connect_unit(), connection.return_value)
+            self.assertEqual(handler.cgi_params.param_post('identifier'), 'card-id')
+            self.assertEqual(handler.cgi_params.paramlist_post('identifier'), ['card-id'])
+            with self.assertRaises(Params.NotFoundError):
+                handler.cgi_params.param_post('missing')
+            connection.assert_called_once_with('::1', 8080)
 
     def test_single_unit_fallback_and_ambiguous_selection(self):
         for units in ([self.unit], [], [self.unit, self.unit]):
