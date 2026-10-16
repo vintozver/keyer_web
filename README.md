@@ -40,6 +40,7 @@ shown above.
 
 Active admin users can open **Manage keyer units** from the home page, or visit
 `/admin/unit`, to create, edit, or delete units and add or remove signing keys.
+Administrators can view the latest 300 logged events at `/admin/log`.
 All management requests require an active administrator session; changes are
 POST-only and protected by a session-bound CSRF token. Paste a PEM public key
 or X.509 certificate when adding a key; it is validated and converted to DER
@@ -72,12 +73,10 @@ exactly one exists, omitting `unit_id` selects it automatically. Hosts and
 ports are read only from provisioned unit documents, never from request data.
 Card and user configuration remains shared across all units.
 
-Unit callbacks (`GET /config`, with optional trailing slash) require
+Unit callbacks (`GET /config` and `POST /log`, with optional trailing slash) require
 an `Authorization` header containing the `Bearer` scheme followed by the JWT.
-The existing `/log` route is also protected,
-but its callback implementation is not included in this repository.
 Use PyJWT to sign a JSON-object payload (an empty object is sufficient for
-`/config`) with these **protected JWT headers**:
+both callbacks) with these **protected JWT headers**:
 
 - `unit_id`: the unit ObjectId as a 24-character hexadecimal string.
 - `kid`: an id from that unit's keyset.
@@ -91,6 +90,137 @@ ES256/384/512, and EdDSA. Unsigned and HMAC tokens are rejected. Standard JWT
 expiry/not-before claims are checked when present. Invalid credentials receive
 401 with a `WWW-Authenticate` bearer challenge; session cookies cannot authorize callbacks.
 Successful configuration responses use `Cache-Control: no-store`.
+
+## Event log
+
+MongoDB's `log` collection stores `LogEvent` documents with these fields:
+
+| Model field | BSON field/type | Meaning |
+| --- | --- | --- |
+| `oid` | `_id`, ObjectId | Unique event identifier, generated once when the event occurs |
+| `card_id` | UUID or null | Unit-reported card UUID; null for controller events |
+| `user_id` | ObjectId or null | User resolved from the card record; acting user for controller commands |
+| `name` | string, at most 128 characters | Snapshot of the resolved user's name; empty when unknown |
+| `event` | string | `card_tap`, `remote_unlock`, `card_personalize`, `card_format`, or `revocation` |
+| `unit_id` | ObjectId or null | Unit involved, when applicable |
+
+ObjectIds include the event creation time at second resolution. Generate the
+ObjectId on the unit **at collection time**, not at upload time. Controller
+events retain historical name snapshots even if a user is later renamed or
+deleted. Unit events retain the reported card UUID, and retries with the same
+event/card pair keep the original identity snapshot. The controller resolves
+the reported card UUID against issued and revoked cards, then looks up its user
+by stored user id (or by email for legacy card records). Unknown cards or users
+use `user_id: null` and `name: ""`.
+
+The controller records `remote_unlock` after the selected unit returns HTTP 200,
+and `revocation` after the selected unit accepts the command and the controller
+updates the card records. These describe acknowledged commands, not independently
+verified relay actuation. Failed commands do not produce success events.
+Personalization and formatting are recorded by the unit callback only, avoiding
+duplicate entries for the same physical operation. Audit write failures are
+surfaced as errors, not reported as success. A controller command may already
+have taken effect when its audit write fails; the external operation and MongoDB
+cannot be committed as one transaction.
+
+### Atomic batch upload
+
+`POST /log` accepts `Content-Type: application/json` and the same unit JWT as
+`/config`. Send the following body (the JWT payload can remain `{}`):
+
+```json
+[
+  {
+    "oid": "6aefe9c80000000000000001",
+    "event": "card_tap",
+    "card_id": "6aefe9c8000000000000000000000002"
+  }
+]
+```
+
+The request body is a JSON array of events. Each entry must contain exactly
+`oid`, `event`, and `card_id`; `card_id` is the tapped card UUID (32 hexadecimal
+digits or the standard hyphenated UUID form). Units may send only `card_tap`,
+`card_personalize`, and `card_format`. The server supplies `unit_id` from the
+authenticated JWT and resolves user identity from the card record; units never
+send user ids or names. If no matching card/user exists, the event is still
+stored with empty identity fields.
+
+Batches must contain 1-1000 events, have no duplicate ObjectIds, and fit within
+1 MiB. All entries are validated before writes. All inserts/upserts run in a
+single MongoDB transaction with snapshot read concern and majority write concern.
+**MongoDB must be a replica set (a single-node replica set is sufficient) or a
+sharded cluster; standalone MongoDB cannot accept log batches.** Configure the
+database user to permit sessions, transactions, and writes to `log`.
+
+On committed success, HTTP 200 returns:
+
+```json
+{"accepted": ["6aefe9c80000000000000001"]}
+```
+
+Only remove these acknowledged events from the unit's buffer. Resending identical
+events with their original ObjectIds is safe, including retries after a lost
+response and batches mixing acknowledged and new events. Existing events are
+immutable. Reusing an ObjectId with different data or from another unit returns
+409 and rolls back the entire batch, including new events.
+
+Invalid batches return 400, invalid/missing JWTs return 401, unsupported methods
+return 405 (`Allow: POST`), oversized bodies return 413, and non-JSON media types
+return 415. Database/transaction failures return 503 without an acknowledgement.
+No error response acknowledges a subset of the batch. Retain events on network
+errors, timeouts, or any non-200 response; use fresh JWTs on retries. A 400/409
+requires investigation rather than repeatedly discarding or regenerating events.
+Callback responses use `Cache-Control: no-store`.
+
+### Companion `keyer` implementation proposal
+
+The current units do not upload events yet. Add the following in the companion
+repository before relying on card-event coverage:
+
+- In `storage.Base`/`storage.RemoteHttp`, introduce a thread-safe in-memory event
+  queue and a periodic uploader (for example every five seconds), independent of
+  the five-minute configuration refresh. Use `bson.ObjectId` from a declared
+  `pymongo` dependency to generate stable event ids. Never block the dispatcher
+  on a controller HTTP request.
+- `GET /config` continues to return the existing `users` tuples without a
+  separate user-id mapping. Enqueue the stable event ObjectId, event type, and
+  tapped card UUID; the controller resolves user identity when receiving events.
+- In `Dispatcher.idle_card_tap_process`, enqueue exactly one `card_tap` per
+  presentation, including denied or unrecognized cards, with the card UUID and
+  no user id or name. Track the physical presentation, not every read in the
+  polling loop. In `personalize_card` and `depersonalize_card`, enqueue
+  `card_personalize` and `card_format` only after confirmed success, including
+  the affected card UUID.
+- Snapshot a prefix of up to 1000 queued events under a lock, release the lock
+  during HTTPS upload to `https://<control.endpoint>/log`, and sign a fresh JWT
+  with the existing unit key and headers. Permit only one upload at a time.
+  On HTTP 200, verify that `accepted` exactly matches the submitted ObjectIds
+  before removing that prefix under the lock. Preserve events appended during
+  upload and retain the original prefix on errors, including malformed 200
+  responses. Retry with backoff without regenerating ids or snapshots.
+- Make queue overflow an explicit reported failure, not silent event loss.
+  Attempt a bounded final flush at shutdown. Memory-only buffering necessarily
+  loses pending events on power loss/restart; disk persistence would be a
+  separate reliability improvement. Local-file mode needs an explicit uploader
+  configuration if it is also expected to report to the controller.
+- Cover concurrent enqueue/upload, lost acknowledgements, identical retries,
+  offline recovery, denied taps, formatting, and shutdown in
+  hardware-independent tests. Do not duplicate controller-owned remote unlock
+  or revocation events in the uploader.
+
+### Testing
+
+Run the regular suite with `python -m unittest discover -s tests`. To also verify
+real commits, retries and all-or-nothing rollback, point the integration tests at
+a disposable MongoDB replica set:
+
+```sh
+KEYER_TEST_MONGODB_URI='mongodb://localhost:27017/?replicaSet=rs0' \
+  python -m unittest discover -s tests -p test_logging.py
+```
+
+The integration tests create and remove their own uniquely named database.
 
 ## Syncing the users
 

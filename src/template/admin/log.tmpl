@@ -1,0 +1,23 @@
+{% extends "skeleton" %}
+
+{% block body_content %}
+<h1>Admin: Recent events</h1>
+<p><a href="/">Back to access system</a> · <a href="/admin/unit">Manage keyer units</a></p>
+<p>Showing the latest {{ events|length }} events.</p>
+<table>
+<tr><th>Time</th><th>Event</th><th>Card</th><th>User</th><th>User id</th><th>Unit id</th><th>Event id</th></tr>
+{% for event in events %}
+<tr>
+<td>{{ event.oid.generation_time|datetime('%Y-%m-%d %H:%M:%S %Z')|e }}</td>
+<td>{{ event.event|e }}</td>
+<td>{{ event.card_id|string|e if event.card_id else '' }}</td>
+<td>{{ event.name|e }}</td>
+<td>{{ event.user_id|string|e if event.user_id else '' }}</td>
+<td>{{ event.unit_id|string|e if event.unit_id else '' }}</td>
+<td>{{ event.oid|string|e }}</td>
+</tr>
+{% else %}
+<tr><td colspan="7">No events have been logged.</td></tr>
+{% endfor %}
+</table>
+{% endblock %}

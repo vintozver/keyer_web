@@ -29,6 +29,7 @@ class Handler(paramed_cgi_Handler):
             if unit is None:
                 self.unit_error(http.client.NOT_FOUND, 'Unknown unit')
                 return None
+        self.unit = unit
         return http.client.HTTPConnection(unit.host, unit.port)
 
     def unit_error(self, status, message):

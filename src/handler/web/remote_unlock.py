@@ -7,6 +7,7 @@ from .remote_unit import Handler as remote_unit_Handler
 from ..ext.paramed_cgi import HandlerError as paramed_cgi_HandlerError
 from ...module import mongo as mod_mongo
 from ...module.mongo import user as mod_mongo_user
+from ...module.mongo.log import LogEvent
 
 
 class HandlerError(paramed_cgi_HandlerError):
@@ -28,7 +29,13 @@ class Handler(remote_unit_Handler):
         try:
             conn.request('POST', '/', headers={'X-Email': user.email})
             resp = conn.getresponse()
-            resp.read()
+            body = resp.read()
+            if resp.status != http.client.OK:
+                self.unit_error(resp.status, body)
+                return
+            LogEvent(
+                user_id=user.id, name=user.name or '', event='remote_unlock',
+                unit_id=self.unit.id).save()
         finally:
             conn.close()
 
