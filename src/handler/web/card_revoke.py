@@ -9,6 +9,7 @@ from ..ext.paramed_cgi import HandlerError as paramed_cgi_HandlerError
 from ...module import mongo as mod_mongo
 from ...module.mongo import user as mod_mongo_user
 from ...module.mongo import card as mod_mongo_card
+from ...module.mongo.log import LogEvent
 
 
 class HandlerError(paramed_cgi_HandlerError):
@@ -56,6 +57,9 @@ class Handler(remote_unit_Handler):
                 revoked_card.issued = card.issued
                 revoked_card.save()
                 card.delete()
+                LogEvent(
+                    user_id=user.id, name=user.name or '', event='revocation',
+                    unit_id=self.unit.id).save()
 
                 self.req.setResponseCode(http.client.OK, http.client.responses[http.client.OK])
                 self.req.setHeader('Cache-Control', 'public, no-cache')
