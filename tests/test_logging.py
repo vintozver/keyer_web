@@ -4,6 +4,7 @@ import io
 import json
 import os
 import threading
+import uuid
 from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, Mock, patch
@@ -32,7 +33,10 @@ def request(body, method='POST', path='/log', content_type='application/json'):
 
 
 def event(**values):
-    return {'oid': str(ObjectId()), 'event': 'card_tap', **values}
+    return {
+        'oid': str(ObjectId()), 'event': 'card_tap',
+        'card_id': uuid.uuid4().hex, **values,
+    }
 
 
 class LogCallbackTests(unittest.TestCase):
@@ -42,7 +46,10 @@ class LogCallbackTests(unittest.TestCase):
     def invoke(self, payload=None, body=None, **kwargs):
         req = request(body if body is not None else json.dumps(payload).encode(), **kwargs)
         req.unit = SimpleNamespace(id=self.unit_id)
-        with patch.object(callback_log, 'store_batch') as store:
+        with (
+            patch.object(callback_log, 'resolve_card_identities', return_value={}),
+            patch.object(callback_log, 'store_batch') as store,
+        ):
             callback_log.Handler(req)()
         return req, store
 
@@ -57,16 +64,69 @@ class LogCallbackTests(unittest.TestCase):
         for item, document in zip(items, store.call_args.args[0]):
             document.validate()
             self.assertEqual(document.oid, ObjectId(item['oid']))
+            self.assertEqual(document.card_id, uuid.UUID(item['card_id']))
             self.assertIsNone(document.user_id)
             self.assertEqual(document.name, '')
             self.assertEqual(document.event, item['event'])
             self.assertEqual(document.unit_id, self.unit_id)
 
-    def test_unit_event_does_not_bind_user_identity(self):
+    def test_card_uuid_resolves_identity_from_issued_and_revoked_cards(self):
+        user_id, legacy_user_id = ObjectId(), ObjectId()
+        card_ids = [uuid.uuid4(), uuid.uuid4()]
+        cards = [
+            SimpleNamespace(id=card_ids[0], user_id=user_id, email='resident@example.com'),
+            SimpleNamespace(id=card_ids[1], user_id=None, email='legacy@example.com'),
+        ]
+        users = [
+            SimpleNamespace(id=user_id, email='resident@example.com', name='Resident'),
+            SimpleNamespace(id=legacy_user_id, email='legacy@example.com', name='Legacy resident'),
+        ]
+        with (
+            patch.object(callback_log.mod_mongo_card, 'IssuedCard') as issued,
+            patch.object(callback_log.mod_mongo_card, 'RevokedCard') as revoked,
+            patch.object(callback_log.mod_mongo_user, 'UserDocument') as user_documents,
+        ):
+            issued.objects.return_value = cards[:1]
+            revoked.objects.return_value = cards[1:]
+            user_documents.objects.side_effect = [users[:1], users[1:]]
+            identities = callback_log.resolve_card_identities({card.id for card in cards})
+        self.assertEqual(identities, {
+            cards[0].id: (user_id, 'Resident'),
+            cards[1].id: (legacy_user_id, 'Legacy resident'),
+        })
+
+    def test_resolved_identity_is_assigned_to_event(self):
+        card_id, user_id = uuid.uuid4(), ObjectId()
+        with patch.object(
+            callback_log, 'resolve_card_identities',
+            return_value={card_id: (user_id, 'Resident')},
+        ):
+            document = callback_log.parse_events(
+                {'events': [event(card_id=card_id.hex)]}, self.unit_id)[0]
+        self.assertEqual(document.user_id, user_id)
+        self.assertEqual(document.name, 'Resident')
+
+    def test_unit_event_without_card_record_has_empty_identity(self):
         req, store = self.invoke({'events': [event()]})
         self.assertEqual(req.status_code, 200)
         self.assertIsNone(store.call_args.args[0][0].user_id)
         self.assertEqual(store.call_args.args[0][0].name, '')
+
+    def test_identity_lookup_failure_is_not_acknowledged(self):
+        req = request(json.dumps({'events': [event()]}).encode())
+        req.unit = SimpleNamespace(id=self.unit_id)
+        with (
+            patch.object(
+                callback_log, 'resolve_card_identities',
+                side_effect=OperationFailure('Unavailable')),
+            patch.object(callback_log, 'store_batch') as store,
+            patch.object(callback_log, 'Logger') as logger,
+        ):
+            callback_log.Handler(req)()
+        self.assertEqual(req.status_code, 503)
+        self.assertNotIn('accepted', json.loads(b''.join(req.response_body)))
+        store.assert_not_called()
+        logger.return_value.traceback.assert_called_once()
 
     def test_invalid_payload_never_writes_any_events(self):
         item = event()
@@ -75,10 +135,12 @@ class LogCallbackTests(unittest.TestCase):
             {'events': [item], 'unit_id': str(ObjectId())},
             {'events': [item, item]}, {'events': [None]},
             {'events': [event(oid=None)]}, {'events': [event(oid=42)]},
-            {'events': [event(oid='bad')]}, {'events': [event(user_id=str(ObjectId()))]},
+            {'events': [event(oid='bad')]}, {'events': [event(card_id='bad')]},
+            {'events': [event(user_id=str(ObjectId()))]},
             {'events': [event(name='Resident')]}, {'events': [event(event='remote_unlock')]},
             {'events': [event(event='revocation')]}, {'events': [event(event={})]},
             {'events': [event(unit_id=str(ObjectId()))]},
+            {'events': [{'oid': str(ObjectId()), 'event': 'card_tap'}]},
             {'events': [event(), event(oid='bad')]},
             {'events': [event() for _ in range(callback_log.MAX_EVENTS + 1)]},
         ]
@@ -125,6 +187,7 @@ class LogCallbackTests(unittest.TestCase):
             req = request(json.dumps({'events': [event()]}).encode())
             req.unit = SimpleNamespace(id=self.unit_id)
             with (
+                patch.object(callback_log, 'resolve_card_identities', return_value={}),
                 patch.object(callback_log, 'store_batch', side_effect=error),
                 patch.object(callback_log, 'Logger') as logger,
             ):
@@ -150,6 +213,7 @@ class LogCallbackTests(unittest.TestCase):
                 req.requestHeaders['Authorization'] = 'Bearer ' + token
                 with (
                     patch.object(unit_auth, 'UnitDocument') as units,
+                    patch.object(callback_log, 'resolve_card_identities', return_value={}),
                     patch.object(callback_log, 'store_batch') as store,
                 ):
                     units.objects.return_value.first.return_value = unit
@@ -188,6 +252,24 @@ class LogStorageTests(unittest.TestCase):
         for operation, document in zip(args[0], documents):
             self.assertEqual(operation._filter, dict(document.to_mongo()))
             self.assertEqual(operation._doc, {'$setOnInsert': dict(document.to_mongo())})
+
+    def test_unit_event_retry_matches_source_payload_not_resolved_identity(self):
+        collection = MagicMock()
+        session = collection.database.client.start_session.return_value.__enter__.return_value
+        session.with_transaction.side_effect = lambda callback, **kwargs: callback(session)
+        document = log.LogEvent(
+            card_id=uuid.uuid4(), user_id=ObjectId(), name='Resident',
+            event='card_tap', unit_id=ObjectId())
+        with patch.object(log.LogEvent, '_get_collection', return_value=collection):
+            log.store_batch([document])
+        operation = collection.bulk_write.call_args.args[0][0]
+        self.assertEqual(operation._filter, {
+            key: value for key, value in document.to_mongo().items()
+            if key in ('_id', 'card_id', 'unit_id', 'event')
+        })
+        self.assertNotIn('user_id', operation._filter)
+        self.assertNotIn('name', operation._filter)
+        self.assertEqual(operation._doc, {'$setOnInsert': dict(document.to_mongo())})
 
     def test_only_duplicate_key_errors_become_conflicts(self):
         collection = MagicMock()
@@ -304,6 +386,9 @@ class LogTransactionIntegrationTests(unittest.TestCase):
         self.lookup = patch.object(log.LogEvent, '_get_collection', return_value=self.collection)
         self.lookup.start()
         self.addCleanup(self.lookup.stop)
+        self.identities = patch.object(callback_log, 'resolve_card_identities', return_value={})
+        self.identities.start()
+        self.addCleanup(self.identities.stop)
 
     def test_commit_and_identical_retry(self):
         items = callback_log.parse_events({'events': [event(), event()]}, ObjectId())

@@ -17,6 +17,7 @@ class LogEvent(mod_mongo.mongoengine.Document):
 
     oid = mod_mongo.mongoengine.ObjectIdField(
         db_field='_id', primary_key=True, default=mod_mongo.bson.ObjectId)
+    card_id = mod_mongo.mongoengine.UUIDField(null=True)
     user_id = mod_mongo.mongoengine.ObjectIdField(null=True)
     name = mod_mongo.mongoengine.StringField(max_length=128, default='')
     event = mod_mongo.mongoengine.StringField(required=True, choices=EVENTS)
@@ -34,7 +35,16 @@ def store_batch(events):
         documents.append(dict(event.to_mongo()))
     collection = LogEvent._get_collection()
     operations = [
-        UpdateOne(document, {'$setOnInsert': document}, upsert=True)
+        UpdateOne(
+            (
+                {
+                    key: document[key]
+                    for key in ('_id', 'card_id', 'unit_id', 'event')
+                }
+                if document.get('card_id') is not None else document
+            ),
+            {'$setOnInsert': document},
+            upsert=True)
         for document in documents
     ]
 
