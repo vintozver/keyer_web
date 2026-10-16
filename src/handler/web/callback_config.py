@@ -20,16 +20,11 @@ class Handler(paramed_cgi_Handler):
 
         # see https://github.com/vintozver/keyer/blob/master/src/dispatcher.py
         # for the schema compatibility
-        users = list(mod_mongo_user.UserDocument.objects(active=True))
         response = {
-            'user_ids': {
-                user.email: str(user.id)
-                for user in users
-            },
             'users': dict(map(lambda user: (
                 user.email,
                 [user.name, user.flags, user.id.generation_time.isoformat()]
-            ), users)),
+            ), mod_mongo_user.UserDocument.objects(active=True))),
             'issued_cards': dict(map(lambda issued_card: (
                 issued_card.id.hex,
                 [

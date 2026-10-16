@@ -97,15 +97,16 @@ MongoDB's `log` collection stores `LogEvent` documents with these fields:
 | Model field | BSON field/type | Meaning |
 | --- | --- | --- |
 | `oid` | `_id`, ObjectId | Unique event identifier, generated once when the event occurs |
-| `user_id` | ObjectId or null | User associated with a card event; acting user for controller commands |
-| `name` | string, at most 128 characters | Snapshot of the user's name; empty when unknown |
+| `user_id` | ObjectId or null | Acting user for controller commands; null for unit-reported events |
+| `name` | string, at most 128 characters | Snapshot of the acting user's name; empty for unit-reported events |
 | `event` | string | `card_tap`, `remote_unlock`, `card_personalize`, `card_format`, or `revocation` |
 | `unit_id` | ObjectId or null | Unit involved, when applicable |
 
 ObjectIds include the event creation time at second resolution. Generate the
-ObjectId on the unit **at collection time**, not at upload time. Stored names
-remain historical snapshots even if a user is later renamed or deleted.
-Unidentified taps use `user_id: null` and `name: ""`.
+ObjectId on the unit **at collection time**, not at upload time. Controller
+events retain historical name snapshots even if a user is later renamed or
+deleted. Unit-reported events are not bound to users and use `user_id: null` and
+`name: ""`.
 
 The controller records `remote_unlock` after the selected unit returns HTTP 200,
 and `revocation` after the selected unit accepts the command and the controller
@@ -127,8 +128,6 @@ cannot be committed as one transaction.
   "events": [
     {
       "oid": "6aefe9c80000000000000001",
-      "user_id": "6aefe9c80000000000000002",
-      "name": "Resident",
       "event": "card_tap"
     }
   ]
@@ -136,10 +135,9 @@ cannot be committed as one transaction.
 ```
 
 The top-level object must contain only `events`. Each entry must contain exactly
-`oid`, `user_id`, `name`, and `event`; units may send only `card_tap`,
-`card_personalize`, and `card_format`. The server supplies `unit_id` from the
-authenticated JWT, never from uploaded data. User ids and names are historical
-unit-reported data, not authorization to perform any user operation.
+`oid` and `event`; units may send only `card_tap`, `card_personalize`, and
+`card_format`. The server supplies `unit_id` from the authenticated JWT, never
+from uploaded data. The unit does not send or resolve user identities.
 
 Batches must contain 1-1000 events, have no duplicate ObjectIds, and fit within
 1 MiB. All entries are validated before writes. All inserts/upserts run in a
@@ -178,17 +176,15 @@ repository before relying on card-event coverage:
   the five-minute configuration refresh. Use `bson.ObjectId` from a declared
   `pymongo` dependency to generate stable event ids. Never block the dispatcher
   on a controller HTTP request.
-- `GET /config` now includes an additive `user_ids` mapping from email to user
-  ObjectId string. Existing `users` tuples remain unchanged. Cache the mapping
-  alongside users to capture `user_id` and name when enqueueing, rather than
-  resolving identities at upload time.
+- `GET /config` continues to return the existing `users` tuples without a
+  separate user-id mapping. Enqueue only the stable event ObjectId and event
+  type; unit events are not bound to user identities.
 - In `Dispatcher.idle_card_tap_process`, enqueue exactly one `card_tap` per
   presentation, including denied or unrecognized cards. Only associate a user
-  after verifying card ownership; otherwise use null/empty identity. Track the
-  physical presentation, not every read in the polling loop. In
-  `personalize_card` and `depersonalize_card`, enqueue `card_personalize` and
-  `card_format` only after confirmed success. Capture the card owner's identity
-  before deleting issued/revoked card records during formatting.
+  locally as needed for access decisions, but do not include that identity in
+  the event. Track the physical presentation, not every read in the polling
+  loop. In `personalize_card` and `depersonalize_card`, enqueue
+  `card_personalize` and `card_format` only after confirmed success.
 - Snapshot a prefix of up to 1000 queued events under a lock, release the lock
   during HTTPS upload to `https://<control.endpoint>/log`, and sign a fresh JWT
   with the existing unit key and headers. Permit only one upload at a time.
@@ -202,7 +198,7 @@ repository before relying on card-event coverage:
   separate reliability improvement. Local-file mode needs an explicit uploader
   configuration if it is also expected to report to the controller.
 - Cover concurrent enqueue/upload, lost acknowledgements, identical retries,
-  offline recovery, denied taps, formatting identity capture, and shutdown in
+  offline recovery, denied taps, formatting, and shutdown in
   hardware-independent tests. Do not duplicate controller-owned remote unlock
   or revocation events in the uploader.
 

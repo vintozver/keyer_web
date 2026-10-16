@@ -32,10 +32,7 @@ def request(body, method='POST', path='/log', content_type='application/json'):
 
 
 def event(**values):
-    return {
-        'oid': str(ObjectId()), 'user_id': str(ObjectId()),
-        'name': 'Resident', 'event': 'card_tap', **values,
-    }
+    return {'oid': str(ObjectId()), 'event': 'card_tap', **values}
 
 
 class LogCallbackTests(unittest.TestCase):
@@ -60,15 +57,16 @@ class LogCallbackTests(unittest.TestCase):
         for item, document in zip(items, store.call_args.args[0]):
             document.validate()
             self.assertEqual(document.oid, ObjectId(item['oid']))
-            self.assertEqual(document.user_id, ObjectId(item['user_id']))
-            self.assertEqual(document.name, item['name'])
+            self.assertIsNone(document.user_id)
+            self.assertEqual(document.name, '')
             self.assertEqual(document.event, item['event'])
             self.assertEqual(document.unit_id, self.unit_id)
 
-    def test_unidentified_card_tap(self):
-        req, store = self.invoke({'events': [event(user_id=None, name='')]})
+    def test_unit_event_does_not_bind_user_identity(self):
+        req, store = self.invoke({'events': [event()]})
         self.assertEqual(req.status_code, 200)
         self.assertIsNone(store.call_args.args[0][0].user_id)
+        self.assertEqual(store.call_args.args[0][0].name, '')
 
     def test_invalid_payload_never_writes_any_events(self):
         item = event()
@@ -77,14 +75,12 @@ class LogCallbackTests(unittest.TestCase):
             {'events': [item], 'unit_id': str(ObjectId())},
             {'events': [item, item]}, {'events': [None]},
             {'events': [event(oid=None)]}, {'events': [event(oid=42)]},
-            {'events': [event(oid='bad')]}, {'events': [event(user_id='bad')]},
-            {'events': [event(user_id=12)]}, {'events': [event(name=None)]},
-            {'events': [event(name='x' * 129)]}, {'events': [event(event='remote_unlock')]},
+            {'events': [event(oid='bad')]}, {'events': [event(user_id=str(ObjectId()))]},
+            {'events': [event(name='Resident')]}, {'events': [event(event='remote_unlock')]},
             {'events': [event(event='revocation')]}, {'events': [event(event={})]},
             {'events': [event(unit_id=str(ObjectId()))]},
             {'events': [event(), event(oid='bad')]},
             {'events': [event() for _ in range(callback_log.MAX_EVENTS + 1)]},
-            {'events': [{key: value for key, value in item.items() if key != 'name'}]},
         ]
         for payload in cases:
             with self.subTest(payload=str(payload)[:150]):
@@ -221,7 +217,7 @@ class ControllerAuditTests(unittest.TestCase):
             id=ObjectId(), name='Resident', email='resident@example.com', admin=False)
         self.unit = SimpleNamespace(id=ObjectId(), host='localhost', port=80)
 
-    def test_config_adds_user_ids_without_changing_existing_tuples(self):
+    def test_config_does_not_expose_user_ids_or_change_existing_tuples(self):
         self.user.flags = 'R*'
         req = request(b'', method='GET', path='/config')
         with (
@@ -233,7 +229,7 @@ class ControllerAuditTests(unittest.TestCase):
             issued.objects.return_value = revoked.objects.return_value = []
             callback_config.Handler(req)()
         payload = json.loads(b''.join(req.response_body))
-        self.assertEqual(payload['user_ids'], {self.user.email: str(self.user.id)})
+        self.assertNotIn('user_ids', payload)
         self.assertEqual(payload['users'][self.user.email], [
             self.user.name, self.user.flags, self.user.id.generation_time.isoformat(),
         ])
@@ -321,7 +317,7 @@ class LogTransactionIntegrationTests(unittest.TestCase):
         original = event()
         log.store_batch(callback_log.parse_events({'events': [original]}, unit_id))
         for changes in (
-            {'name': 'Changed'}, {'event': 'card_format'}, {'user_id': str(ObjectId())},
+            {'event': 'card_format'},
         ):
             new = event()
             batch = callback_log.parse_events({'events': [new, {**original, **changes}]}, unit_id)
@@ -368,7 +364,7 @@ class LogTransactionIntegrationTests(unittest.TestCase):
         for items, status in (
             ([original], 200),
             ([original], 200),
-            ([new, {**original, 'name': 'Changed'}], 409),
+            ([new, {**original, 'event': 'card_format'}], 409),
         ):
             req = request(json.dumps({'events': items}).encode())
             req.requestHeaders['Authorization'] = 'Bearer ' + jwt.encode(

@@ -26,25 +26,18 @@ def parse_events(payload, unit_id):
     events = []
     seen = set()
     for item in items:
-        if not isinstance(item, dict) or set(item) != {'oid', 'user_id', 'name', 'event'}:
-            raise ValueError('Each event requires only oid, user_id, name and event')
+        if not isinstance(item, dict) or set(item) != {'oid', 'event'}:
+            raise ValueError('Each event requires only oid and event')
         oid = item['oid']
-        user_id = item['user_id']
         if not isinstance(oid, str) or not ObjectId.is_valid(oid):
             raise ValueError('oid must be a 24-character hexadecimal ObjectId')
-        if user_id is not None and (not isinstance(user_id, str) or not ObjectId.is_valid(user_id)):
-            raise ValueError('user_id must be a hexadecimal ObjectId or null')
-        if not isinstance(item['name'], str) or len(item['name']) > 128:
-            raise ValueError('name must be a string of at most 128 characters')
         if item['event'] not in UNIT_EVENTS:
             raise ValueError('Units may only report card_tap, card_personalize and card_format')
         oid = ObjectId(oid)
         if oid in seen:
             raise ValueError('Duplicate oid in batch')
         seen.add(oid)
-        events.append(LogEvent(
-            oid=oid, user_id=ObjectId(user_id) if user_id is not None else None,
-            name=item['name'], event=item['event'], unit_id=unit_id))
+        events.append(LogEvent(oid=oid, event=item['event'], unit_id=unit_id))
     return events
 
 

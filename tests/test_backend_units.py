@@ -169,7 +169,7 @@ class UnitAuthenticationTests(unittest.TestCase):
             frontend.Handler(req)()
         self.assertEqual(req.status_code, 200)
         self.assertEqual(json.loads(b''.join(req.response_body)), {
-            'users': {}, 'user_ids': {}, 'issued_cards': {}, 'revoked_cards': {}})
+            'users': {}, 'issued_cards': {}, 'revoked_cards': {}})
         self.assertEqual(req.responseHeaders['Cache-Control'], 'no-store')
         self.assertIs(req.unit, self.unit)
         self.assertEqual(req.context.items, {})
