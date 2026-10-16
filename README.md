@@ -129,18 +129,16 @@ cannot be committed as one transaction.
 `/config`. Send the following body (the JWT payload can remain `{}`):
 
 ```json
-{
-  "events": [
-    {
-      "oid": "6aefe9c80000000000000001",
-      "event": "card_tap",
-      "card_id": "6aefe9c8000000000000000000000002"
-    }
-  ]
-}
+[
+  {
+    "oid": "6aefe9c80000000000000001",
+    "event": "card_tap",
+    "card_id": "6aefe9c8000000000000000000000002"
+  }
+]
 ```
 
-The top-level object must contain only `events`. Each entry must contain exactly
+The request body is a JSON array of events. Each entry must contain exactly
 `oid`, `event`, and `card_id`; `card_id` is the tapped card UUID (32 hexadecimal
 digits or the standard hyphenated UUID form). Units may send only `card_tap`,
 `card_personalize`, and `card_format`. The server supplies `unit_id` from the

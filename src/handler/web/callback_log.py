@@ -56,14 +56,11 @@ def resolve_card_identities(card_ids):
 
 
 def parse_events(payload, unit_id):
-    if not isinstance(payload, dict) or set(payload) != {'events'}:
-        raise ValueError('Expected a JSON object containing only events')
-    items = payload['events']
-    if not isinstance(items, list) or not 1 <= len(items) <= MAX_EVENTS:
-        raise ValueError('events must contain between 1 and %s entries' % MAX_EVENTS)
+    if not isinstance(payload, list) or not 1 <= len(payload) <= MAX_EVENTS:
+        raise ValueError('Expected an event array containing between 1 and %s entries' % MAX_EVENTS)
     parsed = []
     seen = set()
-    for item in items:
+    for item in payload:
         if not isinstance(item, dict) or set(item) != {'oid', 'event', 'card_id'}:
             raise ValueError('Each event requires only oid, event and card_id')
         oid = item['oid']

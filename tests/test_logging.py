@@ -55,7 +55,7 @@ class LogCallbackTests(unittest.TestCase):
 
     def test_each_unit_event_is_bound_to_authenticated_unit(self):
         items = [event(event=kind) for kind in log.UNIT_EVENTS]
-        req, store = self.invoke({'events': items})
+        req, store = self.invoke(items)
         self.assertEqual(req.status_code, 200)
         self.assertEqual(json.loads(b''.join(req.response_body)), {
             'accepted': [item['oid'] for item in items],
@@ -102,18 +102,18 @@ class LogCallbackTests(unittest.TestCase):
             return_value={card_id: (user_id, 'Resident')},
         ):
             document = callback_log.parse_events(
-                {'events': [event(card_id=card_id.hex)]}, self.unit_id)[0]
+                [event(card_id=card_id.hex)], self.unit_id)[0]
         self.assertEqual(document.user_id, user_id)
         self.assertEqual(document.name, 'Resident')
 
     def test_unit_event_without_card_record_has_empty_identity(self):
-        req, store = self.invoke({'events': [event()]})
+        req, store = self.invoke([event()])
         self.assertEqual(req.status_code, 200)
         self.assertIsNone(store.call_args.args[0][0].user_id)
         self.assertEqual(store.call_args.args[0][0].name, '')
 
     def test_identity_lookup_failure_is_not_acknowledged(self):
-        req = request(json.dumps({'events': [event()]}).encode())
+        req = request(json.dumps([event()]).encode())
         req.unit = SimpleNamespace(id=self.unit_id)
         with (
             patch.object(
@@ -131,18 +131,17 @@ class LogCallbackTests(unittest.TestCase):
     def test_invalid_payload_never_writes_any_events(self):
         item = event()
         cases = [
-            None, [], {}, {'events': []}, {'events': {}},
-            {'events': [item], 'unit_id': str(ObjectId())},
-            {'events': [item, item]}, {'events': [None]},
-            {'events': [event(oid=None)]}, {'events': [event(oid=42)]},
-            {'events': [event(oid='bad')]}, {'events': [event(card_id='bad')]},
-            {'events': [event(user_id=str(ObjectId()))]},
-            {'events': [event(name='Resident')]}, {'events': [event(event='remote_unlock')]},
-            {'events': [event(event='revocation')]}, {'events': [event(event={})]},
-            {'events': [event(unit_id=str(ObjectId()))]},
-            {'events': [{'oid': str(ObjectId()), 'event': 'card_tap'}]},
-            {'events': [event(), event(oid='bad')]},
-            {'events': [event() for _ in range(callback_log.MAX_EVENTS + 1)]},
+            None, {}, {'events': [item]}, [],
+            [item, item], [None],
+            [event(oid=None)], [event(oid=42)],
+            [event(oid='bad')], [event(card_id='bad')],
+            [event(user_id=str(ObjectId()))],
+            [event(name='Resident')], [event(event='remote_unlock')],
+            [event(event='revocation')], [event(event={})],
+            [event(unit_id=str(ObjectId()))],
+            [{'oid': str(ObjectId()), 'event': 'card_tap'}],
+            [event(), event(oid='bad')],
+            [event() for _ in range(callback_log.MAX_EVENTS + 1)],
         ]
         for payload in cases:
             with self.subTest(payload=str(payload)[:150]):
@@ -164,18 +163,18 @@ class LogCallbackTests(unittest.TestCase):
             ({'body': b' ' * (callback_log.MAX_BODY_BYTES + 1)}, 413),
         ]
         for kwargs, status in cases:
-            req, store = self.invoke({'events': [event()]}, **kwargs)
+            req, store = self.invoke([event()], **kwargs)
             self.assertEqual(req.status_code, status)
             store.assert_not_called()
             if status == 405:
                 self.assertEqual(req.responseHeaders['Allow'], 'POST')
-        req, _ = self.invoke({'events': [event()]}, content_type='application/json; charset=utf-8')
+        req, _ = self.invoke([event()], content_type='application/json; charset=utf-8')
         self.assertEqual(req.status_code, 200)
 
     def test_maximum_batch_size_is_accepted(self):
-        req, store = self.invoke({'events': [
+        req, store = self.invoke([
             event() for _ in range(callback_log.MAX_EVENTS)
-        ]})
+        ])
         self.assertEqual(req.status_code, 200)
         self.assertEqual(len(store.call_args.args[0]), callback_log.MAX_EVENTS)
 
@@ -184,7 +183,7 @@ class LogCallbackTests(unittest.TestCase):
             (log.EventConflict('Conflict'), 409),
             (OperationFailure('Transactions require a replica set', code=20), 503),
         ):
-            req = request(json.dumps({'events': [event()]}).encode())
+            req = request(json.dumps([event()]).encode())
             req.unit = SimpleNamespace(id=self.unit_id)
             with (
                 patch.object(callback_log, 'resolve_card_identities', return_value={}),
@@ -209,7 +208,7 @@ class LogCallbackTests(unittest.TestCase):
         })
         for router in (frontend.Handler, backend.Handler):
             for path in ('/log', '/log/'):
-                req = request(json.dumps({'events': [event()]}).encode(), path=path)
+                req = request(json.dumps([event()]).encode(), path=path)
                 req.requestHeaders['Authorization'] = 'Bearer ' + token
                 with (
                     patch.object(unit_auth, 'UnitDocument') as units,
@@ -391,7 +390,7 @@ class LogTransactionIntegrationTests(unittest.TestCase):
         self.addCleanup(self.identities.stop)
 
     def test_commit_and_identical_retry(self):
-        items = callback_log.parse_events({'events': [event(), event()]}, ObjectId())
+        items = callback_log.parse_events([event(), event()], ObjectId())
         log.store_batch(items)
         log.store_batch(items)
         self.assertEqual(self.collection.count_documents({}), 2)
@@ -400,12 +399,12 @@ class LogTransactionIntegrationTests(unittest.TestCase):
     def test_conflicting_event_rolls_back_new_events(self):
         unit_id = ObjectId()
         original = event()
-        log.store_batch(callback_log.parse_events({'events': [original]}, unit_id))
+        log.store_batch(callback_log.parse_events([original], unit_id))
         for changes in (
             {'event': 'card_format'},
         ):
             new = event()
-            batch = callback_log.parse_events({'events': [new, {**original, **changes}]}, unit_id)
+            batch = callback_log.parse_events([new, {**original, **changes}], unit_id)
             with self.assertRaises(log.EventConflict):
                 log.store_batch(batch)
             self.assertIsNone(self.collection.find_one({'_id': ObjectId(new['oid'])}))
@@ -413,20 +412,20 @@ class LogTransactionIntegrationTests(unittest.TestCase):
 
     def test_unit_cannot_reuse_another_units_event_oid(self):
         original = event()
-        log.store_batch(callback_log.parse_events({'events': [original]}, ObjectId()))
+        log.store_batch(callback_log.parse_events([original], ObjectId()))
         with self.assertRaises(log.EventConflict):
-            log.store_batch(callback_log.parse_events({'events': [event(), original]}, ObjectId()))
+            log.store_batch(callback_log.parse_events([event(), original], ObjectId()))
         self.assertEqual(self.collection.count_documents({}), 1)
 
     def test_existing_event_and_new_event_can_be_acknowledged_together(self):
         original, new = event(), event()
         unit_id = ObjectId()
-        log.store_batch(callback_log.parse_events({'events': [original]}, unit_id))
-        log.store_batch(callback_log.parse_events({'events': [original, new]}, unit_id))
+        log.store_batch(callback_log.parse_events([original], unit_id))
+        log.store_batch(callback_log.parse_events([original, new], unit_id))
         self.assertEqual(self.collection.count_documents({}), 2)
 
     def test_concurrent_identical_uploads_remain_idempotent(self):
-        items = callback_log.parse_events({'events': [event(), event()]}, ObjectId())
+        items = callback_log.parse_events([event(), event()], ObjectId())
         barrier = threading.Barrier(4)
 
         def upload():
@@ -451,7 +450,7 @@ class LogTransactionIntegrationTests(unittest.TestCase):
             ([original], 200),
             ([new, {**original, 'event': 'card_format'}], 409),
         ):
-            req = request(json.dumps({'events': items}).encode())
+            req = request(json.dumps(items).encode())
             req.requestHeaders['Authorization'] = 'Bearer ' + jwt.encode(
                 {}, private_key, algorithm='EdDSA', headers={
                     'unit_id': str(unit.id), 'kid': 'signing',
