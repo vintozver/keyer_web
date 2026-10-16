@@ -224,6 +224,7 @@ class AdminUnitsTests(unittest.TestCase):
             content = environment.get_template('index').render(
                 user=SimpleNamespace(name='User', admin=admin), cards=[], units=[])
             self.assertEqual('href="/admin/unit"' in content, admin)
+            self.assertEqual('href="/admin/log"' in content, admin)
 
 
 if __name__ == '__main__':

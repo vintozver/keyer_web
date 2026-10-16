@@ -40,6 +40,7 @@ shown above.
 
 Active admin users can open **Manage keyer units** from the home page, or visit
 `/admin/unit`, to create, edit, or delete units and add or remove signing keys.
+Administrators can view the latest 300 logged events at `/admin/log`.
 All management requests require an active administrator session; changes are
 POST-only and protected by a session-bound CSRF token. Paste a PEM public key
 or X.509 certificate when adding a key; it is validated and converted to DER

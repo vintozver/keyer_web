@@ -15,6 +15,7 @@ from ...util.logger import Logger
 
 class Handler(_Handler):
     ROUTE_MAP = [
+        {'regex': re.compile(r'^/admin/log/?$'), 'handler': 'handler.web.admin.log'},
         {'regex': re.compile(r'^/admin/unit/?$'), 'handler': 'handler.web.admin.unit'},
         {'regex': re.compile(r'^/(?:config|log)/?$'), 'handler': 'handler.web.backend'},
         {'regex': re.compile(r'^/$'), 'handler': 'handler.web.index'},
